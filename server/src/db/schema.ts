@@ -72,12 +72,12 @@ const migrations = [
 ];
 
 export function migrate(db: Database.Database) {
-  const version = db.pragma('user_version', { simple: true }) as number;
-  if (version > migrations.length) throw new Error(`Database schema ${version} is newer than this application`);
   db.transaction(() => {
+    const version = db.pragma('user_version', { simple: true }) as number;
+    if (version > migrations.length) throw new Error(`Database schema ${version} is newer than this application`);
     for (let i = version; i < migrations.length; i++) {
       db.exec(migrations[i]!);
       db.pragma(`user_version = ${i + 1}`);
     }
-  })();
+  }).immediate();
 }

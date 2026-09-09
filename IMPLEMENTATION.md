@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–6](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
+Scope: [issue #1, phases 1–8](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -29,8 +29,10 @@ The Windows Codex sandbox account cannot run tsx's account lookup in a child pro
 
 Phase 6 validation on 2026-09-09: `pnpm --filter shared build`, `pnpm --filter shared typecheck`, and `pnpm --filter shared test` pass (six contract tests, with TypeScript assertions checked). Workspace lint, typecheck, and build pass; the Windows full suite reports 50 passed and one POSIX-only skip. The shared package uses only type exports, with no added runtime dependencies. Endpoint-specific contracts can extend this package in their implementation phases.
 
-Preflight confirmed phases 1–5 checked off and their recorded commit `f2a722c6dd6578cc29499760c4208bb2d9f29024` in history. Source spot checks matched the issue. The user-authorized policy commit `f9abd03bf67b5e4b0ae6a613660af472df51bd3d` restored a clean `main` before phase 6 began. Phase 6 is a separate commit. Issue #1 records its exact SHA and latest working-tree/push state; no phase 7 work was started. The existing session handoff comment is updated rather than duplicated.
+Preflight confirmed phases 1–5 checked off and their recorded commit `f2a722c6dd6578cc29499760c4208bb2d9f29024` in history. Source spot checks matched the issue. The user-authorized policy commit `f9abd03bf67b5e4b0ae6a613660af472df51bd3d` restored a clean `main` before phase 6 began. Phase 6 is a separate commit. Issue #1 records its exact SHA and latest working-tree/push state; phase 7 was deferred until the subsequent user request. The existing session handoff comment is updated rather than duplicated.
 
 The user's standing checkpoint-update instruction is saved in `AGENTS.md`: after a phase or phase group completes and the build passes, update the issue body and add a nonduplicated session handoff comment, explicitly recording dirty state and actual commit SHAs or their absence.
 
 Phase 7 acceptance: `pnpm --filter server test queue` and `pnpm --filter server test off-loop` pass, including 200 provider tasks capped at three workers and a blocked worker with a responsive health handler. Workspace typecheck, lint, and build pass. Phase 8 is next. The phase commit and push state are recorded in issue #1.
+
+Phase 8 (0.8.0): Library detection, manual settings with live effective-provider resolution, off-loop scanning and sidecar recovery, a single status classifier, insert-only Date Added, latest-folder Date Updated, and the listed library/item endpoints are implemented. Status (6 tests) and scanner (7 tests including status) acceptance pass. Concurrent fresh database opens are protected by an immediate migration transaction. Workspace lint, typecheck, and build pass. Phase 9 is next; issue #1 records commits and push state.

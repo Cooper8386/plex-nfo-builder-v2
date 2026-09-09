@@ -5,6 +5,9 @@ import { loadEnv, type Env } from './config/env.js';
 import { settingsSchema, type Settings } from './config/settings.js';
 import { healthRoutes } from './routes/health.js';
 import { createRequire } from 'node:module';
+import { ScannerClient } from './services/scanner/client.js';
+import { libraryRoutes } from './routes/libraries.js';
+import { itemRoutes } from './routes/items.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -24,10 +27,14 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   });
   if (env.cors_allow_origins.length) app.register(cors, { origin: env.cors_allow_origins });
   healthRoutes(app, env, options.settings ?? (() => settingsSchema.parse({})), pkg.version);
+  const scanner = new ScannerClient(env, options.settings ?? (() => settingsSchema.parse({})));
+  libraryRoutes(app, scanner);
+  itemRoutes(app, scanner);
+  app.addHook('onClose', () => scanner.close());
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
-    const status = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    const status = error.validation ? 422 : error.message === 'Path outside MEDIA_ROOT' ? 400 : error.message === 'Library not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     reply.code(status).send({ detail: status === 500 ? 'Internal server error' : error.message });
   });
-  return app;
+  return Object.assign(app, { scanner });
 }

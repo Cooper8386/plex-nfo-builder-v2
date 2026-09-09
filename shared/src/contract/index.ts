@@ -12,3 +12,4 @@ export type * from './item.js';
 export type * from './binding.js';
 export type * from './job.js';
 export type * from './settings.js';
+export type * from './status.js';

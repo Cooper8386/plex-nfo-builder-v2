@@ -13,6 +13,9 @@ export async function startServer(env: Env = loadEnv(), startup?: () => Promise<
     void (async () => {
       const store = new SettingsStore(configPaths(env.config_dir).settings, message => app.log.error(message));
       settings = await store.load();
+      void app.scanner.detect().then(async libraries => {
+        for (const library of libraries) if (library.enabled) await app.scanner.scan(library.name);
+      }).catch(() => app.log.error('Startup library scan failed; check the media mount.'));
       await startup?.();
     })().catch(() => app.log.error('Startup failed; check configuration. Listener remains available.'));
   });

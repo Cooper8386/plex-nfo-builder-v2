@@ -1,5 +1,5 @@
 {
-  "name": "shared", "version": "0.7.0", "private": true, "type": "module",
+  "name": "shared", "version": "0.8.0", "private": true, "type": "module",
   "exports": { ".": { "types": "./src/index.ts", "default": "./dist/index.js" } },
   "scripts": { "build": "tsc -p tsconfig.build.json", "typecheck": "tsc --noEmit", "test": "tsc --noEmit && vitest run --root .. shared/src/contract" }
 }
