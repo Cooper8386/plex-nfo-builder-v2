@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–9](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
+Scope: [issue #1, phases 1–10](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -38,3 +38,5 @@ Phase 7 acceptance: `pnpm --filter server test queue` and `pnpm --filter server 
 Phase 8 (0.8.0): Library detection, manual settings with live effective-provider resolution, off-loop scanning and sidecar recovery, a single status classifier, insert-only Date Added, latest-folder Date Updated, and the listed library/item endpoints are implemented. Status (6 tests) and scanner (7 tests including status) acceptance pass. Concurrent fresh database opens are protected by an immediate migration transaction. Workspace lint, typecheck, and build pass. Phase 9 is next; issue #1 records commits and push state.
 
 Phase 9 (0.9.0): Filename parsing implements standard/multi-episode, anime, daily and unparsed precedence, folder/movie IDs and movie-folder detection. MediaInfo extracts codec, bit depth, HDR/DV, audio variants, channels, languages, quality and release group. A dedicated worker owns ffprobe and its bounded path/mtime cache; missing or unreadable media returns filename fallbacks. Parser and mediainfo acceptance pass, as do workspace typecheck, lint and build. No matching or renaming was added. Phase 10 is next.
+
+Phase 10 (0.10.0): TVDB, TMDB, fanart and Plex clients are implemented. Provider data shares normalized metadata/cast/episode/season/artwork shapes; TVDB movies use TMDB cast when a cross-reference or pinned secondary ID resolves. A single native HTTP transport pools connections, pins validated DNS answers, validates redirects, retries up to three times with Retry-After, and uses the SQLite provider cache (168 hours by default; force bypasses reads but writes). Fanart 404s cache for one hour. Plex translates the longest matching path prefix and reports failure without throwing. Private and loopback Plex URLs are blocked as issue #1 explicitly requires. Clients must be constructed in workers because the cache owns synchronous SQLite access. Canned-response acceptance, typecheck, lint and build pass; no live credentials used. Cast filtering and artwork selection remain phases 13 and 14. Phase 11 is next.

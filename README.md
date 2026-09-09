@@ -1,6 +1,6 @@
 # Plex NFO Builder v2
 
-Node 24 / TypeScript rebuild tracked in [issue #1](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1), based on `REPO_SPEC.md`. Version 0.9.0 implements milestone 1 phases 1–9. This is a foundation, not a feature-complete media manager.
+Node 24 / TypeScript rebuild tracked in [issue #1](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1), based on `REPO_SPEC.md`. Version 0.10.0 implements milestone 1 phases 1–10. This is a foundation, not a feature-complete media manager.
 
 ## Development
 
