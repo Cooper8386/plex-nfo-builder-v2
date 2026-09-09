@@ -1,2 +1,1 @@
-// Shared API contracts are introduced in phase 6.
-export {};
+export type * from './contract/index.js';

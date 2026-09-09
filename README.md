@@ -1,6 +1,6 @@
 # Plex NFO Builder v2
 
-Node 24 / TypeScript rebuild tracked in [issue #1](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1), based on `REPO_SPEC.md`. Version 0.5.0 implements milestone 1 phases 1–5. This is a foundation, not a feature-complete media manager.
+Node 24 / TypeScript rebuild tracked in [issue #1](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1), based on `REPO_SPEC.md`. Version 0.6.0 implements milestone 1 phases 1–6. This is a foundation, not a feature-complete media manager.
 
 ## Development
 
@@ -21,6 +21,8 @@ curl -H 'X-API-Token: your-token' http://localhost:8000/api/health
 ```
 
 The React placeholder runs separately with `pnpm --filter client dev`. The server currently exposes only health; UI serving and the remaining API routes arrive in later phases.
+
+API types are exported from the `shared` workspace package. The server health route and client type entry point consume that package. `pnpm --filter shared test` checks the contract assertions with TypeScript before running Vitest. This phase adds no endpoint behavior or network client.
 
 ## Container skeleton
 

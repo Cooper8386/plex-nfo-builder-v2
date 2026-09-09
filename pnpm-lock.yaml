@@ -38,6 +38,9 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
+      shared:
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/react':
         specifier: ^19.0.0
@@ -60,6 +63,9 @@ importers:
       fastify:
         specifier: ^5.12.3
         version: 5.12.3
+      shared:
+        specifier: workspace:*
+        version: link:../shared
       zod:
         specifier: ^4.0.0
         version: 4.5.4

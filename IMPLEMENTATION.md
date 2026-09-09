@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–5](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults and normalization. No application media was modified.
+Scope: [issue #1, phases 1–6](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -9,12 +9,13 @@ Scope: [issue #1, phases 1–5](https://github.com/Cooper8386/plex-nfo-builder-v
 | 3 | 0.3.0 | Dry-run reset CLI, explicit confirmation, conservative filename matching, symlink protection, captured-list execution |
 | 4 | 0.4.0 | All 13 schema entities, WAL and additive migrations, binding constraints, provider cache, atomic v2 sidecars, full recovery hook |
 | 5 | 0.5.0 | Environment/default resolution, cached settings, serialized partial saves, normalization, secret handling, visible corruption errors |
+| 6 | 0.6.0 | Shared core API types, package exports and consumer wiring, compile-time contract assertions |
 
 ESLint uses its current flat configuration (`eslint.config.js`) instead of the plan's legacy `.eslintrc.cjs`. The generic provider cache is named `provider_cache`. Seven rename defaults were read from the authorized old-app reference; template execution remains phase 17.
 
-Phase 6 is next: shared API contract types. Scanner wiring (phase 8), queue and off-loop database ownership (phase 7), settings routes, and the application UI are intentionally outside this checkpoint. Startup binds before loading local settings and never accesses the media root.
+Phase 7 is next: concurrency spine. Scanner wiring (phase 8), queue and off-loop database ownership (phase 7), settings routes, and the application UI are intentionally outside this checkpoint. Startup binds before loading local settings and never accesses the media root. Phase 6 adds types only: the health reply is annotated, and `client/src/api.ts` re-exports shared types without adding network calls.
 
-Validation on 2026-09-09:
+Phase 1–5 validation on 2026-09-09:
 
 - `pnpm install`, `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass.
 - Windows suite: 44 tests pass, one POSIX permissions test is skipped; two consecutive runs pass and sandbox cleanup is asserted.
@@ -25,6 +26,8 @@ Validation on 2026-09-09:
 
 The Windows Codex sandbox account cannot run tsx's account lookup in a child process (`uv_os_get_passwd`); the full suite was verified under the normal Windows account and in Docker. Lint, typecheck, and builds also pass in the sandbox.
 
-Phases 1–5 are included together in the initial implementation commit on `main`. Issue #1 records the commit SHA and latest working-tree/push state, marks phases 1–5 complete, identifies phase 6 as next, and records deviations and validation. The session handoff comment was added on 2026-09-09 and is updated when the checkpoint is committed and pushed.
+Phase 6 validation on 2026-09-09: `pnpm --filter shared build`, `pnpm --filter shared typecheck`, and `pnpm --filter shared test` pass (six contract tests, with TypeScript assertions checked). Workspace lint, typecheck, and build pass; the Windows full suite reports 50 passed and one POSIX-only skip. The shared package uses only type exports, with no added runtime dependencies. Endpoint-specific contracts can extend this package in their implementation phases.
+
+Preflight confirmed phases 1–5 checked off and their recorded commit `f2a722c6dd6578cc29499760c4208bb2d9f29024` in history. Source spot checks matched the issue. The user-authorized policy commit `f9abd03bf67b5e4b0ae6a613660af472df51bd3d` restored a clean `main` before phase 6 began. Phase 6 is a separate commit. Issue #1 records its exact SHA and latest working-tree/push state; no phase 7 work was started. The existing session handoff comment is updated rather than duplicated.
 
 The user's standing checkpoint-update instruction is saved in `AGENTS.md`: after a phase or phase group completes and the build passes, update the issue body and add a nonduplicated session handoff comment, explicitly recording dirty state and actual commit SHAs or their absence.

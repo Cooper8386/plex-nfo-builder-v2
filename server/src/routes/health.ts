@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import type { HealthResponse } from 'shared';
 import type { Env } from '../config/env.js';
 import { credential, type Settings } from '../config/settings.js';
 
 export function healthRoutes(app: FastifyInstance, env: Env, settings: () => Settings, version: string) {
-  app.get('/api/health', async () => {
+  app.get<{ Reply: HealthResponse }>('/api/health', async () => {
     const value = settings();
     return {
       ok: true, version, media_root: env.media_root,
