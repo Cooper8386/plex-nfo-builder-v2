@@ -8,6 +8,8 @@ import { createRequire } from 'node:module';
 import { ScannerClient } from './services/scanner/client.js';
 import { libraryRoutes } from './routes/libraries.js';
 import { itemRoutes } from './routes/items.js';
+import { MatcherClient } from './services/matcher/client.js';
+import { matchRoutes } from './routes/match.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -30,11 +32,14 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   const scanner = new ScannerClient(env, options.settings ?? (() => settingsSchema.parse({})));
   libraryRoutes(app, scanner);
   itemRoutes(app, scanner);
+  const matcher = new MatcherClient(env, options.settings ?? (() => settingsSchema.parse({})));
+  matchRoutes(app, matcher);
+  app.addHook('onClose', () => matcher.close());
   app.addHook('onClose', () => scanner.close());
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
-    const status = error.validation ? 422 : error.message === 'Path outside MEDIA_ROOT' ? 400 : error.message === 'Library not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    const status = error.validation ? 422 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Library not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     reply.code(status).send({ detail: status === 500 ? 'Internal server error' : error.message });
   });
-  return Object.assign(app, { scanner });
+  return Object.assign(app, { scanner, matcher });
 }

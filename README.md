@@ -1,6 +1,6 @@
 # Plex NFO Builder v2
 
-Node 24 / TypeScript rebuild tracked in [issue #1](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1), based on `REPO_SPEC.md`. Version 0.10.0 implements milestone 1 phases 1–10. This is a foundation, not a feature-complete media manager.
+Node 24 / TypeScript rebuild tracked in [issue #1](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1), based on `REPO_SPEC.md`. Version 0.11.0 implements milestone 1 phases 1–11. This is a foundation, not a feature-complete media manager.
 
 ## Development
 
@@ -20,9 +20,9 @@ Set `API_TOKEN` in your process environment before starting `pnpm dev`. The list
 curl -H 'X-API-Token: your-token' http://localhost:8000/api/health
 ```
 
-The React placeholder runs separately with `pnpm --filter client dev`. The server currently exposes only health; UI serving and the remaining API routes arrive in later phases.
+The React placeholder runs separately with `pnpm --filter client dev`. The server exposes health, library detection/settings, items/status explanations, and matching/binding routes. Startup detects and scans libraries after binding the listener. UI serving and the remaining API routes arrive in later phases.
 
-API types are exported from the `shared` workspace package. The server health route and client type entry point consume that package. `pnpm --filter shared test` checks the contract assertions with TypeScript before running Vitest. This phase adds no endpoint behavior or network client.
+API types are exported from the `shared` workspace package and consumed by the server routes and client type entry point. `pnpm --filter shared test` checks the contract assertions with TypeScript before running Vitest.
 
 ## Container skeleton
 
@@ -47,9 +47,11 @@ The CLI lists NFOs, app sidecars, standard artwork, image thumbnails, and actor 
 
 ## Storage and configuration
 
-`openDatabase(configDir)` creates `app.db` with WAL, foreign keys, and versioned additive migrations. Schema work performs no media-tree scan and runs only when called. The phase 7 worker layer must own synchronous SQLite work when it is connected to live routes.
+`openDatabase(configDir)` creates `app.db` with WAL, foreign keys, and versioned additive migrations. Application workers own synchronous SQLite operations. Independent worker pools keep scans and provider work away from health handling. The durable queue persists jobs and logs, resumes queued jobs, and marks interrupted jobs failed on restart.
 
-Sidecars use a fresh version 2 format with relative episode file paths. Legacy sidecars are deliberately unsupported. `recoverSidecar(db, folder)` restores all sidecar state only when that folder has no binding; phase 8 will call it during scans. Missing or truncated sidecars read as absent. Binding locks and secondary-provider constraints are enforced; tags deduplicate without case sensitivity.
+Sidecars use a fresh version 2 format with relative episode file paths. Legacy sidecars are deliberately unsupported. Scans call `recoverSidecar(db, folder)` to restore all sidecar state only when that folder has no binding. Missing or truncated sidecars read as absent. Every binding mutation writes a sidecar; failed writes preserve the existing database binding. Locks and secondary-provider constraints are enforced; tags deduplicate without case sensitivity.
+
+TVDB, TMDB, fanart and Plex share guarded, pooled HTTP and a SQLite cache. The default TTL is 168 hours; fanart 404s cache for one hour. Force refresh bypasses cache reads and still writes fresh results. SSRF checks block private, loopback and metadata addresses, including Plex URLs, as issue #1 requires. MediaInfo runs ffprobe in a worker with a path/mtime cache; unavailable probes fall back to filename signals. NFO building and artwork selection remain later phases.
 
 Use one `SettingsStore` per settings file. It caches reads, serializes field-level updates, and writes through a sibling temporary file followed by fsync and replacement. Corrupt settings are reported and must be repaired before a save can succeed. Empty secret strings preserve existing credentials. Credential priority is user settings, captured environment, then current process environment. `overwrite_foreign_nfo` defaults to true, as decided in issue #1.
 
