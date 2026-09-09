@@ -1,5 +1,5 @@
 {
-  "name": "client", "version": "0.6.0", "private": true, "type": "module",
+  "name": "client", "version": "0.7.0", "private": true, "type": "module",
   "scripts": { "dev": "vite", "build": "tsc --noEmit && vite build", "typecheck": "tsc --noEmit", "lint": "eslint ." },
   "dependencies": { "shared": "workspace:*", "react": "^19.3.0", "react-dom": "^19.3.0" },
   "devDependencies": { "vite": "^8.2.2", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0" }

@@ -7,6 +7,7 @@ export async function providerDouble(provider: 'tvdb' | 'tmdb' | 'fanart', respo
   let mode: ProviderMode = 'normal';
   let inFlight = 0;
   let peak = 0;
+  let delayMs = 0;
   const requests: string[] = [];
   const server = createServer((request, response) => {
     inFlight++;
@@ -23,7 +24,7 @@ export async function providerDouble(provider: 'tvdb' | 'tmdb' | 'fanart', respo
     }
     const payload = responses[key];
     response.statusCode = payload === undefined ? 404 : 200;
-    response.end(JSON.stringify(payload ?? { error: 'No canned response', provider }));
+    setTimeout(() => response.end(JSON.stringify(payload ?? { error: 'No canned response', provider })), delayMs);
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -32,6 +33,7 @@ export async function providerDouble(provider: 'tvdb' | 'tmdb' | 'fanart', respo
   return {
     url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     requests, setMode: (value: ProviderMode) => { mode = value; },
+    setDelay: (value: number) => { delayMs = value; },
     get inFlight() { return inFlight; }, get peakInFlight() { return peak; },
     close: () => new Promise<void>((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve());

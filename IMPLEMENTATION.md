@@ -10,10 +10,11 @@ Scope: [issue #1, phases 1–6](https://github.com/Cooper8386/plex-nfo-builder-v
 | 4 | 0.4.0 | All 13 schema entities, WAL and additive migrations, binding constraints, provider cache, atomic v2 sidecars, full recovery hook |
 | 5 | 0.5.0 | Environment/default resolution, cached settings, serialized partial saves, normalization, secret handling, visible corruption errors |
 | 6 | 0.6.0 | Shared core API types, package exports and consumer wiring, compile-time contract assertions |
+| 7 | 0.7.0 | Durable job queue, bounded process workers, isolated SQLite ownership, restart recovery and job logs |
 
 ESLint uses its current flat configuration (`eslint.config.js`) instead of the plan's legacy `.eslintrc.cjs`. The generic provider cache is named `provider_cache`. Seven rename defaults were read from the authorized old-app reference; template execution remains phase 17.
 
-Phase 7 is next: concurrency spine. Scanner wiring (phase 8), queue and off-loop database ownership (phase 7), settings routes, and the application UI are intentionally outside this checkpoint. Startup binds before loading local settings and never accesses the media root. Phase 6 adds types only: the health reply is annotated, and `client/src/api.ts` re-exports shared types without adding network calls.
+Phase 7 adds a durable SQLite job queue, a bounded process worker pool, independent pools for control and media work, restart recovery, timeouts, and per-job logs. Interrupted jobs become failed with an explicit retry message; queued jobs resume. SQLite queue operations run only in the database worker. Scanner wiring is phase 8; builders and queue-triggering watcher/scheduler work remain later phases. The worker runtime only loads application-owned module URLs, never API-supplied code.
 
 Phase 1–5 validation on 2026-09-09:
 
@@ -31,3 +32,5 @@ Phase 6 validation on 2026-09-09: `pnpm --filter shared build`, `pnpm --filter s
 Preflight confirmed phases 1–5 checked off and their recorded commit `f2a722c6dd6578cc29499760c4208bb2d9f29024` in history. Source spot checks matched the issue. The user-authorized policy commit `f9abd03bf67b5e4b0ae6a613660af472df51bd3d` restored a clean `main` before phase 6 began. Phase 6 is a separate commit. Issue #1 records its exact SHA and latest working-tree/push state; no phase 7 work was started. The existing session handoff comment is updated rather than duplicated.
 
 The user's standing checkpoint-update instruction is saved in `AGENTS.md`: after a phase or phase group completes and the build passes, update the issue body and add a nonduplicated session handoff comment, explicitly recording dirty state and actual commit SHAs or their absence.
+
+Phase 7 acceptance: `pnpm --filter server test queue` and `pnpm --filter server test off-loop` pass, including 200 provider tasks capped at three workers and a blocked worker with a responsive health handler. Workspace typecheck, lint, and build pass. Phase 8 is next. The phase commit and push state are recorded in issue #1.

@@ -1,9 +1,12 @@
 import { Writable } from 'node:stream';
+import { createRequire } from 'node:module';
 import { expect, test } from 'vitest';
 import { createApp } from '../app.js';
 import { loadEnv } from '../config/env.js';
 import { startServer } from '../index.js';
 import { withSandbox } from '../../tests/support/sandbox.js';
+
+const { version } = createRequire(import.meta.url)('../../package.json') as { version: string };
 
 test.each(['/api/health', '/api', '/api/unknown', '/docs', '/docs/', '/docs/oauth2-redirect', '/redoc', '/openapi.json'])('auth fails closed on %s', async url => {
   const app = createApp({ env: loadEnv({}), logger: false });
@@ -26,7 +29,7 @@ test('auth rejects bad credentials; accepts all transports with header precedenc
     ]) {
       const response = await app.inject(request);
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject({ ok: true, version: '0.6.0', metadata_source: 'tvdb', plex_configured: false });
+      expect(response.json()).toMatchObject({ ok: true, version, metadata_source: 'tvdb', plex_configured: false });
     }
     expect((await app.inject({ url: '/api/health?api_token=secret', headers: { 'x-api-token': 'bad', authorization: 'Bearer secret' } })).statusCode).toBe(401);
     expect((await app.inject({ url: '/docs' })).statusCode).toBe(401);
