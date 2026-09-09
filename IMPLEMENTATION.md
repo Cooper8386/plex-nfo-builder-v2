@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–8](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
+Scope: [issue #1, phases 1–9](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -36,3 +36,5 @@ The user's standing checkpoint-update instruction is saved in `AGENTS.md`: after
 Phase 7 acceptance: `pnpm --filter server test queue` and `pnpm --filter server test off-loop` pass, including 200 provider tasks capped at three workers and a blocked worker with a responsive health handler. Workspace typecheck, lint, and build pass. Phase 8 is next. The phase commit and push state are recorded in issue #1.
 
 Phase 8 (0.8.0): Library detection, manual settings with live effective-provider resolution, off-loop scanning and sidecar recovery, a single status classifier, insert-only Date Added, latest-folder Date Updated, and the listed library/item endpoints are implemented. Status (6 tests) and scanner (7 tests including status) acceptance pass. Concurrent fresh database opens are protected by an immediate migration transaction. Workspace lint, typecheck, and build pass. Phase 9 is next; issue #1 records commits and push state.
+
+Phase 9 (0.9.0): Filename parsing implements standard/multi-episode, anime, daily and unparsed precedence, folder/movie IDs and movie-folder detection. MediaInfo extracts codec, bit depth, HDR/DV, audio variants, channels, languages, quality and release group. A dedicated worker owns ffprobe and its bounded path/mtime cache; missing or unreadable media returns filename fallbacks. Parser and mediainfo acceptance pass, as do workspace typecheck, lint and build. No matching or renaming was added. Phase 10 is next.
