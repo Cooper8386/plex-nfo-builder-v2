@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { basename, extname, join } from 'node:path';
+import { basename, extname, join, relative, sep } from 'node:path';
 import { mkdir, readFile, readdir, realpath, stat, lstat, unlink } from 'node:fs/promises';
 import type Database from 'better-sqlite3';
 import type { ArtworkCandidatesResponse, ArtworkLanguagesResponse, CustomArtwork, SeasonPosterProgress } from 'shared';
@@ -15,7 +15,8 @@ import { resolveArtwork } from './resolver.js';
 import { seasonPosterProgress } from './season-posters.js';
 import { downloadArtwork, maxArtworkBytes, saveArtwork } from './download.js';
 import { mediaFolders, videoPattern } from '../scanner/layout.js';
-import { parseEpisode } from '../parser/parser.js';
+import { selectEpisode } from '../parser/episode-selection.js';
+import type { NfoOptions } from '../nfo/nfo.js';
 
 export const slotPattern = /^(poster|background|banner|clearlogo|season-\d{2}-poster|episode-thumb-[A-Za-z0-9_-]+)$/;
 export type ArtworkInput = {op:'candidates'|'progress'|'file';path:string}|{op:'languages'}|
@@ -162,9 +163,9 @@ export class ArtworkService {
     if (custom) await saveArtwork(destination,await readFile(await this.customFile(custom[1]!)));
     else await downloadArtwork(url,destination);
   }
-  async write(folder: string, data: Metadata, urls: Record<string,string>) {
+  async write(folder: string, data: Metadata, urls: Record<string,string>, mappings: Pick<NfoOptions,'fileOverrides'|'episodeOverrides'> = {}) {
     const safe = await this.folder(folder);
-    const result = await writeArtworkSet(safe,data,urls,(url,path)=>this.download(url,path));
+    const result = await writeArtworkSet(safe,data,urls,(url,path)=>this.download(url,path),mappings);
     this.db.transaction(()=>{
       for (const [slot,path] of Object.entries(result.files)) this.db.prepare('INSERT INTO active_artwork VALUES (?,?,?,?) ON CONFLICT(folder_path,slot) DO UPDATE SET source_path=excluded.source_path,updated_at=excluded.updated_at').run(safe,slot,path,Date.now());
     })();
@@ -173,7 +174,7 @@ export class ArtworkService {
 }
 
 // Phase 15 calls this with the same chosen URL map passed to NFO rendering.
-export async function writeArtworkSet(folder: string, data: Metadata, urls: Record<string,string>, download = downloadArtwork) {
+export async function writeArtworkSet(folder: string, data: Metadata, urls: Record<string,string>, download = downloadArtwork, mappings: Pick<NfoOptions,'fileOverrides'|'episodeOverrides'> = {}) {
   const files: Record<string,string> = {}, nfoUrls = {...urls};
   for (const [slot,url] of Object.entries(urls)) {
     let name = ({poster:'poster.jpg',background:'background.jpg',banner:'banner.jpg',clearlogo:'clearlogo.png'} as Record<string,string>)[slot];
@@ -186,7 +187,7 @@ export async function writeArtworkSet(folder: string, data: Metadata, urls: Reco
   if (data.kind==='series') for (const group of await mediaFolders(folder)) {
     for (const file of await readdir(group.path,{withFileTypes:true})) {
       if (!file.isFile() || !videoPattern.test(file.name)) continue;
-      const parsed = parseEpisode(file.name), ep = data.episodes.find(ep=>parsed?.air_date?ep.aired===parsed.air_date:parsed?.parsed&&ep.season===parsed.season&&ep.episode===parsed.episode);
+      const ep = selectEpisode(file.name,relative(folder,join(group.path,file.name)).split(sep).join('/'),data.episodes,mappings.fileOverrides,mappings.episodeOverrides);
       if (!ep) continue;
       const slot = `episode-thumb-${ep.id}`, url = urls[slot]??ep.image;
       if (!url) continue;

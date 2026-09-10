@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–14](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified. Current checkpoint: phases 1–14 complete, version 0.14.0; phase 15 is next. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
+Scope: [issue #1, phases 1–15](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified. Current checkpoint: phases 1–15 complete, version 0.15.0; phase 16 is next. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -18,6 +18,7 @@ Scope: [issue #1, phases 1–14](https://github.com/Cooper8386/plex-nfo-builder-
 | 12 | 0.12.0 | Theme tokens and keyboard primitives, routed library shell, token auth, query retry and render recovery |
 | 13 | 0.13.0 | Atomic NFO rendering, provenance, cast filtering, scoped overrides and sidecar persistence |
 | 14 | 0.14.0 | Artwork selection/downloads, manual season posters and progress, custom images, actor portraits and typed routes |
+| 15 | 0.15.0 | Durable queued builds, shared episode mapping, root-video regression and bounded bulk execution |
 
 ESLint uses its current flat configuration (`eslint.config.js`) instead of the plan's legacy `.eslintrc.cjs`. The generic provider cache is named `provider_cache`. Seven rename defaults were read from the authorized old-app reference; template execution remains phase 17.
 
@@ -71,3 +72,7 @@ Phase 14 (0.14.0): Provider and language ranking share one URL map with artwork 
 Phase 14 validation: artwork acceptance (23 tests across five files), season-poster acceptance (four tests), workspace typecheck/lint/build, and the full regression suite pass (117 passed, one existing POSIX-only skip on Windows). Tests cover synthetic Psych selections and recovery, local-season progress, custom upload/read/delete, NFO/disk agreement, streaming failures, path boundaries and symlink safety. Review corrected uploaded season NFO references to point to the root poster and prevented custom-asset symlinks from exposing or deleting config files. TMDB image endpoints are fetched without language filtering when metadata is translated, preserving original-language artwork. No automatic visual matching or UI controls were added.
 
 Phase 14 preflight matched issue #1: phases 1–13 checked, recorded commits in main history, and only the documented actor drafts/checkpoint note dirty at d766de2. Issue #1 records the separate phase 14 commit and verified final tree/push state. No push or real-media changes. Phases 15–20 have not started.
+
+Phase 15 (0.15.0): POST build/bulk validates targets off-loop and dispatches through the durable queue. Runtime credentials/settings travel over IPC without being stored in job payloads. Two workers handle independent folders; repeated-folder jobs serialize. Startup resumes the queue after listen. Builds resolve the bound provider (IMDb uses the effective provider's exact-ID lookup), fetch metadata/artwork, apply saved selections and episode mappings, write artwork and NFOs, download actors, and rescan. A missing show poster fails before NFO writing. The optional foreign-NFO protection and original-title setting are respected. No orphan cleanup, watcher, scheduler, or UI was added.
+
+Phase 15 validation: builder acceptance and root-video regression pass; a 20-folder fixture completes with 80 provider requests and peak concurrency two, and three repeated-folder jobs do not overlap. Review fixed force bypassing only_unbuilt and added one shared episode resolver for both NFOs and thumbnails so mapped unparsed/remapped videos build correctly. The full regression suite passes (129 passed, one existing Windows skip), as do workspace typecheck, lint and build. Source spot checks and phase 14's recorded commit a49485ab38e558031d81674f9337b981c12e1caf matched a clean main before phase 15. Issue #1 records this phase's separate commit and final push/tree state. Phase 16 is next; no push or real-media changes.

@@ -36,6 +36,10 @@ export class TvdbClient {
   async languages() {
     return rows((await this.get('/languages')).data).map(r=>({code:str(r.id),name:str(r.name),native_name:str(r.nativeName)}));
   }
+  async findImdb(id: string, kind: ItemKind) {
+    const data=await this.get(`/search/remoteid/${encodeURIComponent(id)}`);
+    return rows(data.data).map(value=>row(value[kind==='series'?'series':'movie'])).filter(value=>value.id).map(value=>result(value,kind));
+  }
   async details(kind: ItemKind, id: string, options: { force?: boolean; language?: string } = {}): Promise<Metadata> {
     const root = `/${typePath(kind)}/${encodeURIComponent(id)}`;
     const data = row((await this.get(`${root}/extended`, { meta: 'translations' }, options.force)).data);

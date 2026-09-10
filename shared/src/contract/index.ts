@@ -16,3 +16,4 @@ export type * from './status.js';
 export type * from './match.js';
 export type * from './overrides.js';
 export type * from './artwork.js';
+export type * from './build.js';

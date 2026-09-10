@@ -33,7 +33,10 @@ export async function handle(input: { configDir: string; action: string; job?: S
     return job.id;
   }
   if (input.action === 'claim') return db.transaction(() => {
-    const row = db.prepare("SELECT * FROM jobs WHERE status='queued' ORDER BY created_at,rowid LIMIT 1").get() as StoredJob | undefined;
+    const row = db.prepare(`SELECT * FROM jobs AS queued WHERE status='queued' AND
+      (COALESCE(json_extract(payload,'$.serialize_folder'),0)=0 OR NOT EXISTS
+        (SELECT 1 FROM jobs AS running WHERE running.status='running' AND running.folder=queued.folder))
+      ORDER BY created_at,rowid LIMIT 1`).get() as StoredJob | undefined;
     if (!row) return null;
     db.prepare("UPDATE jobs SET status='running',started_at=? WHERE id=?").run(Date.now(), row.id);
     return decode(db.prepare('SELECT * FROM jobs WHERE id=?').get(row.id));

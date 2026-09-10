@@ -1,14 +1,15 @@
 import { basename, extname, join, relative, sep } from 'node:path';
-import { readdir } from 'node:fs/promises';
+import { readdir, open } from 'node:fs/promises';
 import type { MetadataSource } from 'shared';
 import type { Metadata, Episode, Season } from '../providers/normalized.js';
 import { atomicWrite } from '../fs/atomic.js';
 import { mediaFolders, videoPattern } from '../scanner/layout.js';
-import { parseEpisode } from '../parser/parser.js';
+import { selectEpisode } from '../parser/episode-selection.js';
+import type { Sidecar } from '../sidecar/format.js';
 import { filterCast } from './cast.js';
 import { withProvenance } from './provenance.js';
 import { overridden, type Overrides } from './overrides.js';
-export interface NfoOptions { overrides?: Overrides; urls?: Record<string,string>; tags?: string[] }
+export interface NfoOptions { overrides?: Overrides; urls?: Record<string,string>; tags?: string[]; overwriteForeign?:boolean; fileOverrides?:Sidecar['episode_file_overrides']; episodeOverrides?:Sidecar['episode_overrides'] }
 // eslint-disable-next-line no-control-regex -- XML 1.0 excludes these control characters.
 const xmlValue = (v: unknown) => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g,'');
 const escape = (v: unknown) => xmlValue(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
@@ -46,7 +47,14 @@ export function renderSeason(season: Season, options: NfoOptions = {}) {
 export const writeNfo = (path: string, content: string) => atomicWrite(path,content);
 export async function writeNfos(folder: string, data: Metadata, options: NfoOptions = {}) {
   const written: string[] = [];
-  const write = async (path: string, text: string) => {await writeNfo(path,text);written.push(path);};
+  const write = async (path: string, text: string) => {
+    if (options.overwriteForeign===false) {
+      let file;
+      try {file=await open(path,'r');} catch(error) {if ((error as NodeJS.ErrnoException).code!=='ENOENT') throw error;}
+      if (file) try {const buffer=Buffer.alloc(2048);const {bytesRead}=await file.read(buffer,0,2048,0);if (!buffer.subarray(0,bytesRead).toString().includes('<!-- plex-nfo-builder')) return;} finally {await file.close();}
+    }
+    await writeNfo(path,text);written.push(path);
+  };
   if (data.kind === 'series') await write(join(folder,'tvshow.nfo'),renderItem(data,options));
   for (const group of await mediaFolders(folder)) {
     const videos = (await readdir(group.path,{withFileTypes:true})).filter(e=>e.isFile()&&videoPattern.test(e.name));
@@ -62,8 +70,7 @@ export async function writeNfos(folder: string, data: Metadata, options: NfoOpti
         const rendered=renderSeason(season,{...options,urls:{poster}}); if(rendered) await write(join(group.path,'season.nfo'),rendered);
       }
       for (const video of videos) {
-        const parsed=parseEpisode(video.name);
-        const episode=data.episodes.find(e=>parsed?.air_date ? e.aired===parsed.air_date : parsed?.parsed&&e.season===parsed.season&&e.episode===parsed.episode);
+        const episode=selectEpisode(video.name,relative(folder,join(group.path,video.name)).split(sep).join('/'),data.episodes,options.fileOverrides,options.episodeOverrides);
         if (episode) await write(join(group.path,basename(video.name,extname(video.name))+'.nfo'),renderEpisode(episode,data.provider,{...options,urls:{thumb:options.urls?.[`episode-thumb-${episode.id}`]??episode.image??''}}));
       }
     }

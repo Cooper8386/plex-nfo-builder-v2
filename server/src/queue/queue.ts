@@ -12,7 +12,7 @@ export class JobQueue {
   private wakeAgain = false;
   private stopped = true;
   lastError: Error | null = null;
-  constructor(readonly configDir: string, taskModule: URL, readonly concurrency = 2, timeoutMs = 30_000) {
+  constructor(readonly configDir: string, taskModule: URL, readonly concurrency = 2, timeoutMs = 30_000, private context?: () => unknown) {
     this.workers = new WorkerPool(taskModule, concurrency, timeoutMs);
   }
   private store<T>(action: string, data: object = {}) { return this.database.run<T>({ configDir: this.configDir, action, ...data }); }
@@ -54,7 +54,8 @@ export class JobQueue {
     let message = 'Completed';
     try {
       await this.store('log', { id: job.id, message: 'Started' });
-      await this.workers.run(job);
+      // Runtime credentials/settings travel only over IPC; never persist them in the job table.
+      await this.workers.run({...job,context:this.context?.()});
     } catch (error) { status = 'failed'; message = error instanceof Error ? error.message : String(error); }
     await this.store('finish', { id: job.id, status, message });
     await this.store('log', { id: job.id, message });
