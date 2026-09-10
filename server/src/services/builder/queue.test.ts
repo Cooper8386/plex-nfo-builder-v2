@@ -43,7 +43,8 @@ test('builder bulk queues real builds with two workers and serializes repeat bui
   try {
     const bulk = await client.bulk({ library: 'TV' });
     expect(bulk.queued).toBe(20);
-    await expect.poll(async () => (await client.queue.list()).filter(job => job.status === 'completed').length, { timeout: 20000 }).toBe(20);
+    try{await expect.poll(async () => (await client.queue.list()).filter(job => job.status === 'completed').length, { timeout: 20000 }).toBe(20);}
+    catch(error){throw new Error(JSON.stringify({jobs:await client.queue.list(),queueError:client.queue.lastError}),{cause:error});}
     expect(provider.requests).toHaveLength(80);
     expect(provider.peakInFlight).toBeLessThanOrEqual(2);
     expect(provider.peakInFlight).toBeGreaterThan(1);

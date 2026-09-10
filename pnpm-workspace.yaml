@@ -8,6 +8,7 @@ storeDir: .pnpm-store
 allowBuilds:
   better-sqlite3: true
   esbuild: true
+  koffi: true
 
 minimumReleaseAgeExclude:
   - react-dom@19.3.0

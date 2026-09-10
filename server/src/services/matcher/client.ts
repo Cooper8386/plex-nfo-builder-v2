@@ -7,6 +7,7 @@ import type { OverrideRequest, ClearOverridesRequest, OverridesResponse, Overrid
 import type { ArtworkInput } from '../artwork/artwork.js';
 import type { DangerInput } from '../cleaner/danger.js';
 import type { DangerResponse } from 'shared';
+import type { RenameRequest } from 'shared';
 export class MatcherClient {
   private pool = offLoop(workerModule('./worker.js',import.meta.url),{concurrency:1,timeoutMs:300_000});
   constructor(private env: Env, private settings: () => Settings) {}
@@ -22,5 +23,6 @@ export class MatcherClient {
   clearOverrides(payload: ClearOverridesRequest) { return this.run<OverrideResponse>('overrides-clear',payload); }
   artwork<T>(payload: ArtworkInput) { return this.run<T>('artwork',payload); }
   danger(payload:DangerInput) {return this.run<DangerResponse>('danger',payload);}
+  rename<T>(payload:RenameRequest,apply=false) {return this.run<T>(apply?'rename-apply':'rename-preview',payload);}
   close() { return this.pool.close(); }
 }
