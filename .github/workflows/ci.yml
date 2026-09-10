@@ -33,4 +33,6 @@ jobs:
             -H 'X-API-Token: disposable-ci-token' http://127.0.0.1:8765/api/health
           curl --fail http://127.0.0.1:8765/libraries/TV
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/health)" = 401
-          docker exec plex-nfo-builder-test sh -c 'test "$(id -u)" = 1000 && ffprobe -version'
+          docker exec plex-nfo-builder-test sh -c 'test "$(stat -c %u /config/app.db)" = 1000 && ffprobe -version'
+          docker run --rm -e PUID=1234 -e PGID=1234 plex-nfo-builder-test \
+            sh -c 'test "$(id -u):$(id -g)" = 1234:1234 && touch /config/uid-check'

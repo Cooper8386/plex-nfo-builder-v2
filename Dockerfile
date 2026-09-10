@@ -1,5 +1,5 @@
 FROM node:24-bookworm-slim AS base
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg tini && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg gosu tini && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 FROM base AS dependencies
@@ -32,9 +32,9 @@ COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/shared/package.json ./shared/package.json
 COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/client/dist ./client/dist
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN mkdir -p /media /config && chown node:node /media /config
-USER node
 VOLUME ["/media", "/config"]
 EXPOSE 8000
-ENTRYPOINT ["/usr/bin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--", "docker-entrypoint.sh"]
 CMD ["node", "server/dist/index.js"]
