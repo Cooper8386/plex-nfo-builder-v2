@@ -6,15 +6,8 @@ Version 0.22.0 packages the API and UI in one non-root container. Library scans,
 
 ## Docker Compose
 
-1. Copy `.env.example` to `.env`. Set a strong random `API_TOKEN`, `MEDIA_PATH` to your existing media directory, and `CONFIG_PATH` to a new configuration directory. Provider credentials can be entered in Settings. Never commit `.env`.
-2. Create the configuration directory. The container runs as **UID/GID 1000:1000**; grant that account write access to configuration and the media folders where it creates metadata. For a new Linux configuration directory:
-
-   ```sh
-   mkdir -p config
-   sudo chown 1000:1000 config
-   ```
-
-   On Windows, use paths such as `MEDIA_PATH=D:/Media` and `CONFIG_PATH=D:/plex-nfo-config`; create the directory and allow Docker Desktop to share those paths. Keep `/config` on local storage, not SMB/NFS; `/media` may use a network-backed path.
+1. Copy `.env.example` to `.env`. Set a strong random `API_TOKEN` and `MEDIA_PATH` to your existing media directory. Provider credentials can be entered in Settings. Never commit `.env`.
+2. Set `PUID` and `PGID` to the account that owns the media files (commonly `1000:1000` on Linux or `99:100` on Unraid). A one-shot initializer prepares `/config`; the application container runs entirely as that non-root account.
 3. Build and start:
 
    ```sh
@@ -24,7 +17,7 @@ Version 0.22.0 packages the API and UI in one non-root container. Library scans,
 
 4. Open **http://localhost:8765** and enter your API token. The UI and API share one origin; direct links such as `/libraries/TV` work.
 
-Compose refuses an empty token, unset media path, or missing bind-mount directories. Inside the container, mounts remain `/media` and `/config`. Libraries are immediate subdirectories of `/media`. Startup binds the listener before scanning; builds use a durable queue with two workers.
+Compose refuses an empty token, unset media path, or missing media directory. Configuration defaults to the persistent `plex-nfo-builder-config` Docker volume, requiring no host-directory setup. Set `CONFIG_PATH` only when a host bind mount is preferred; keep it on local storage, not SMB/NFS. On Windows use paths such as `MEDIA_PATH=D:/Media`. Inside the container, mounts remain `/media` and `/config`. Libraries are immediate subdirectories of `/media`. Startup binds the listener before scanning; builds use a durable queue with two workers.
 
 After publication, deploy the registry image without building locally:
 
@@ -40,7 +33,7 @@ docker compose logs --tail=200 -f
 docker compose down
 ```
 
-Bind mounts survive `down`. Back up configuration while the app is stopped, including settings, SQLite files and custom artwork. Back up before upgrades; older images may not read newer database schemas. Runtime includes ffmpeg/ffprobe, tini, compiled server/UI and production dependencies, without source or development tooling.
+The managed volume and bind mounts survive `down`. Back up configuration while the app is stopped, including settings, SQLite files and custom artwork. Back up before upgrades; older images may not read newer database schemas. Runtime includes ffmpeg/ffprobe, tini, compiled server/UI and production dependencies, without source or development tooling.
 
 ## Configuration and security
 
@@ -50,6 +43,7 @@ Bind mounts survive `down`. Back up configuration while the app is stopped, incl
 | --- | --- |
 | `API_TOKEN` | Required shared credential |
 | `MEDIA_ROOT`, `CONFIG_DIR` | Direct Node paths; Compose fixes these to `/media` and `/config` |
+| `PUID`, `PGID` | Application identity and automatic config ownership; defaults to `1000:1000` |
 | `LISTEN_HOST`, `LISTEN_PORT` | Default `0.0.0.0:8000` inside Docker |
 | `TVDB_API_KEY`, `TVDB_PIN`, `TMDB_API_KEY`, `FANART_API_KEY`, `PLEX_TOKEN` | Optional credentials; saved settings take precedence |
 | `WATCHER_ENABLED`, `WATCHER_DEBOUNCE_SECONDS`, `WATCHER_MAX_INFLIGHT` | Defaults: true, 30 seconds, 2 |
@@ -57,7 +51,7 @@ Bind mounts survive `down`. Back up configuration while the app is stopped, incl
 | `LOG_LEVEL`, `TZ` | Defaults: `INFO`, `America/Chicago`; schedules use UTC |
 | `CORS_ALLOW_ORIGINS`, `TRUSTED_HOSTS` | Optional comma-separated explicit allowlists |
 
-`MEDIA_PATH`, `CONFIG_PATH`, `HOST_PORT` and `IMAGE_TAG` are Compose-only settings. Keep `LISTEN_HOST=0.0.0.0` inside Docker for port forwarding. Plex URL and path mappings live in Settings.
+`MEDIA_PATH`, optional `CONFIG_PATH`, `HOST_PORT` and `IMAGE_TAG` are Compose-only settings. Keep `LISTEN_HOST=0.0.0.0` inside Docker for port forwarding. Plex URL and path mappings live in Settings.
 
 All API and reserved docs paths require the token: **503** when unset server-side, **401** for invalid client credentials. Priority: `X-API-Token`, Bearer authorization, then `api_token` query parameter. Access logs omit query strings. UI assets are public; media/API data are protected. Unknown API routes retain JSON 404 responses. File boundaries reject escapes and links outside permitted roots.
 

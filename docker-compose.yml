@@ -1,4 +1,14 @@
 services:
+  config-init:
+    image: ghcr.io/cooper8386/plex-nfo-builder-v2:${IMAGE_TAG:-edge}
+    build: .
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R ${PUID:-1000}:${PGID:-1000} /config"]
+    volumes:
+      - ${CONFIG_PATH:-plex-nfo-builder-config}:/config
+    restart: "no"
+
   plex-nfo-builder:
     image: ghcr.io/cooper8386/plex-nfo-builder-v2:${IMAGE_TAG:-edge}
     build: .
@@ -23,15 +33,18 @@ services:
       WATCHER_DEBOUNCE_SECONDS: ${WATCHER_DEBOUNCE_SECONDS:-30}
       WATCHER_MAX_INFLIGHT: ${WATCHER_MAX_INFLIGHT:-2}
       WATCHER_KILL_SWITCH: ${WATCHER_KILL_SWITCH:-false}
+    user: "${PUID:-1000}:${PGID:-1000}"
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
     volumes:
       - type: bind
         source: ${MEDIA_PATH:?Set MEDIA_PATH to the host media directory}
         target: /media
         bind:
           create_host_path: false
-      - type: bind
-        source: ${CONFIG_PATH:-./config}
-        target: /config
-        bind:
-          create_host_path: false
+      - ${CONFIG_PATH:-plex-nfo-builder-config}:/config
     restart: unless-stopped
+
+volumes:
+  plex-nfo-builder-config:
