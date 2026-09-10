@@ -5,6 +5,10 @@ import { join } from 'node:path';
 import { openDatabase } from '../db/connection.js';
 
 export interface StoredJob extends Job { payload: unknown }
+export function enqueueJob(db:Database.Database,job:Pick<StoredJob,'id'|'kind'|'folder'|'payload'>){
+  db.prepare('INSERT INTO jobs(id,kind,folder,payload,status,created_at) VALUES (?,?,?,?,?,?)').run(job.id,job.kind,job.folder,JSON.stringify(job.payload),'queued',Date.now());
+  return job.id;
+}
 let database: Database.Database | undefined;
 let config: string | undefined;
 export async function handle(input: { configDir: string; action: string; job?: StoredJob; id?: string; status?: 'completed' | 'failed'; message?: string }) {
@@ -28,9 +32,7 @@ export async function handle(input: { configDir: string; action: string; job?: S
   }
   if (input.action === 'enqueue') {
     const job = input.job!;
-    db.prepare('INSERT INTO jobs(id,kind,folder,payload,status,created_at) VALUES (?,?,?,?,?,?)')
-      .run(job.id, job.kind, job.folder, JSON.stringify(job.payload), 'queued', Date.now());
-    return job.id;
+    return enqueueJob(db,job);
   }
   if (input.action === 'claim') return db.transaction(() => {
     const row = db.prepare(`SELECT * FROM jobs AS queued WHERE status='queued' AND

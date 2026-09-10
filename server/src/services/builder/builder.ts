@@ -22,6 +22,7 @@ import { classifyStatus } from '../scanner/status.js';
 import { effectiveSource } from '../matcher/effective-source.js';
 import type { StoredJob } from '../../queue/jobs-table.js';
 import { previewOrphans,applyOrphans } from '../orphans/orphans.js';
+import { runScheduled,type ScheduledRun } from '../scheduler/worker.js';
 
 export async function buildTarget(db: Database.Database, root: string, path: string, kind?: ItemKind, requireBinding=true) {
   const folder=await mediaPath(root,path), parts=relative(await mediaPath(root,'.'),folder).split(sep);
@@ -75,5 +76,6 @@ export async function handle(job:StoredJob & {context:{env:Env;settings:Settings
   const {env,settings}=job.context;
   if (!database) {database=await openDatabase(env.config_dir);config=env.config_dir;}
   if (config!==env.config_dir) throw new Error('Build worker owns one config directory');
+  if(job.kind==='schedule')return runScheduled(database,env,settings,(job.payload as {schedule:ScheduledRun}).schedule);
   return buildItem(database,env,settings,job.payload as BuildRequest);
 }

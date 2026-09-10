@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–18](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified. Current checkpoint: phases 1–18 complete, version 0.18.0; phase 19 is next. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
+Scope: [issue #1, phases 1–19](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified. Current checkpoint: phases 1–19 complete, version 0.19.0; phase 20 is next. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -22,6 +22,7 @@ Scope: [issue #1, phases 1–18](https://github.com/Cooper8386/plex-nfo-builder-
 | 16 | 0.16.0 | Captured cleanup previews, explicit confirmation, orphan protection, pruning and opt-in automatic sweeps |
 | 17 | 0.17.0 | Sonarr/Radarr rename grammar, checked-subset apply, companions/mapping migration and atomic no-replace moves |
 | 18 | 0.18.0 | Recursive off-loop watcher, stable-media debounce, real queue handoff, review retry and live toggle/status |
+| 19 | 0.19.0 | UTC cron, durable schedule actions, per-schedule run exclusion, CRUD/run-now and tracked results |
 
 ESLint uses its current flat configuration (`eslint.config.js`) instead of the plan's legacy `.eslintrc.cjs`. The generic provider cache is named `provider_cache`. Seven rename defaults were read from the authorized old-app reference; template execution remains phase 17.
 
@@ -93,3 +94,9 @@ Final phase 17 validation: all 155 tests pass with one Windows permissions skip 
 Phase 18 (0.18.0): Recursive fs.watch registration and event inspection run in a dedicated process; imports/listener startup do no media I/O. Video/directory arrivals collapse to item folders, debounce resets on new events, and video size/mtime fingerprints must stabilize before dispatch. Bound items rescan and queue a build; unbound items run the existing matcher/sidecar flow before queueing. Failed matches enter review, and retry re-arms the real pipeline. The concurrency cap and environment kill switch apply to future handoffs. Watcher status/events/review/toggle routes are typed, and toggle persists through the single SettingsStore now owned by the app. Startup still loads settings and detects libraries only after listen.
 
 Phase 18 review preserved pending/active work across unrelated reloads while cancelling disabled-library handoffs. Lost watch roots and observer exits now update watched_paths/running; failures remain visible in the event ring until reload. Generated artwork, hidden/temp paths and symlinks do not trigger build loops. Watcher acceptance: nine tests pass, including real recursive arrival -> durable build job, review retry, stability, concurrency, reload preservation, lost-root status and persisted kill-switch precedence. Full suite: 164 passed, one existing Windows skip; typecheck/lint/build pass. Issue #1 records the separate commit and clean/local state. No real-media work or push; phase 19 next.
+
+Phase 19 (0.19.0): Five-field UTC cron supports numeric lists/ranges/steps and Sunday 0 or 7. Day matching follows Cronie's wildcard flags, including */N and explicit full-range distinctions, correcting the old set-size approximation. Schedules have typed CRUD/run-now routes, a post-listen loop, persisted last-run/status/message, recovery reconciliation and per-schedule submission exclusion. A dedicated schedule job kind extends the shared job contract; parent actions use the existing queue and schedule builds enqueue ordinary folder jobs with the existing serialization/concurrency rules. No second competing queue was added.
+
+All actions refresh local scans as the reference does. match_only/match_and_build/full match unbound folders; build_only/match_and_build/full enqueue bound incomplete folders. A schedule's ok status means its action completed and child builds were submitted, not that every child build succeeded; each child has its own durable status. Manual run-now can run a disabled schedule. Null library targets all enabled libraries; PATCH null correctly clears a prior specific scope. Review fixed two simultaneous run-now calls claiming the same new run after an earlier completed job.
+
+Phase 19 acceptance: cron and scheduler tests pass, covering all five actions through the actual queue, same-minute suppression, simultaneous run-now, nullable library updates and route statuses. Full suite: 171 passed, one Windows skip; typecheck/lint/build pass. Issue #1 records the separate commit and clean/local state. No UI, real-media work or push. Phase 20 is next.

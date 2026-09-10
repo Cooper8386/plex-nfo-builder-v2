@@ -19,6 +19,8 @@ import { dangerRoutes } from './routes/danger.js';
 import { renameRoutes } from './routes/rename.js';
 import { Watcher } from './services/watcher/watcher.js';
 import { watcherRoutes } from './routes/watcher.js';
+import { Scheduler } from './services/scheduler/scheduler.js';
+import { scheduleRoutes } from './routes/schedules.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -55,11 +57,12 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   const watcher=new Watcher(env,settings,scanner,matcher,builder);
   const saveSettings=async(patch:Partial<Settings>)=>{loadedSettings=await store.save(patch);};
   watcherRoutes(app,watcher,enabled=>saveSettings({watcher_enabled:enabled}));
-  app.addHook('onClose',async()=>{await watcher.close();await builder.close();await matcher.close();await scanner.close();});
+  const scheduler=new Scheduler(env,builder);scheduleRoutes(app,scheduler);
+  app.addHook('onClose',async()=>{await scheduler.close();await watcher.close();await builder.close();await matcher.close();await scanner.close();});
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
-    const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Watcher validation:') || error.message.startsWith('Rename validation:') || error.message.startsWith('Danger validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Schedule validation:') || error.message.startsWith('Watcher validation:') || error.message.startsWith('Rename validation:') || error.message.startsWith('Danger validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Schedule not found' || error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     reply.code(status).send({ detail: status === 500 ? 'Internal server error' : error.message });
   });
-  return Object.assign(app, { scanner, matcher, builder,watcher,settings,saveSettings,loadSettings:async()=>{loadedSettings=await store.load();} });
+  return Object.assign(app, { scanner, matcher, builder,watcher,scheduler,settings,saveSettings,loadSettings:async()=>{loadedSettings=await store.load();} });
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ItemKind } from 'shared';
+import type { JobKind } from 'shared';
 import { WorkerPool } from './worker-pool.js';
 import { workerModule } from '../services/fs/off-loop.js';
 import type { StoredJob } from './jobs-table.js';
@@ -21,7 +21,7 @@ export class JobQueue {
     this.stopped = false;
     this.wake();
   }
-  async enqueue(kind: ItemKind, folder: string, payload: unknown = null) {
+  async enqueue(kind: JobKind, folder: string, payload: unknown = null) {
     const job = { id: randomUUID(), kind, folder, payload };
     await this.store('enqueue', { job });
     this.wake();

@@ -59,7 +59,7 @@ test('binding commands preserve optional defaults and restrict secondary provide
 test('jobs include queued state, nullable lifecycle timestamps and plain-text logs', () => {
   expectTypeOf<JobStatus>().toEqualTypeOf<'queued' | 'running' | 'completed' | 'failed'>();
   expectTypeOf<Job>().toEqualTypeOf<{
-    id: string; kind: 'series' | 'movie'; folder: string; status: JobStatus;
+    id: string; kind: 'series' | 'movie' | 'schedule'; folder: string; status: JobStatus;
     progress: number; total: number; started_at: number | null; finished_at: number | null; messages: string[];
   }>();
   expectTypeOf<JobParams>().toEqualTypeOf<{ id: string }>();

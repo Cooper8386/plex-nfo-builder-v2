@@ -20,3 +20,4 @@ export type * from './build.js';
 export type * from './danger.js';
 export type * from './rename.js';
 export type * from './watcher.js';
+export type * from './schedule.js';

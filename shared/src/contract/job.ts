@@ -2,9 +2,10 @@ import type { ItemKind } from './index.js';
 
 // Queued is required by the durable queue decision; the queue itself is phase 7.
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed';
+export type JobKind=ItemKind|'schedule';
 export interface Job {
   id: string;
-  kind: ItemKind;
+  kind: JobKind;
   folder: string;
   status: JobStatus;
   progress: number;

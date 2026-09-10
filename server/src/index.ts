@@ -10,6 +10,7 @@ export async function startServer(env: Env = loadEnv(), startup?: () => Promise<
     void (async () => {
       await app.loadSettings();
       void app.builder.start().catch(()=>app.log.error('Build queue startup failed; listener remains available.'));
+      void app.scheduler.start().catch(()=>app.log.error('Scheduler startup failed; listener remains available.'));
       void app.scanner.detect().then(async libraries => {
         for (const library of libraries) if (library.enabled) await app.scanner.scan(library.name);
       }).catch(() => app.log.error('Startup library scan failed; check the media mount.'));
