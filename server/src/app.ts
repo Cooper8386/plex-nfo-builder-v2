@@ -14,6 +14,7 @@ import { overrideRoutes } from './routes/overrides.js';
 import { artworkRoutes } from './routes/artwork.js';
 import { BuilderClient } from './services/builder/client.js';
 import { buildRoutes } from './routes/build.js';
+import { dangerRoutes } from './routes/danger.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -40,6 +41,7 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   matchRoutes(app, matcher);
   overrideRoutes(app, matcher);
   artworkRoutes(app, matcher);
+  dangerRoutes(app,matcher);
   const builder=new BuilderClient(env,options.settings??(()=>settingsSchema.parse({})));
   buildRoutes(app,builder);
   app.addHook('onClose',()=>builder.close());
@@ -47,7 +49,7 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   app.addHook('onClose', () => scanner.close());
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
-    const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Danger validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     reply.code(status).send({ detail: status === 500 ? 'Internal server error' : error.message });
   });
   return Object.assign(app, { scanner, matcher, builder });

@@ -21,7 +21,7 @@ test('root-video builder leaves readable tvshow.nfo and poster with complete epi
     await detectLibraries(db, box.media);
     const snapshot = sidecarSchema.parse({ version: 2, binding: { provider: 'tmdb', external_id: '1', kind: 'series' } });
     restoreSnapshot(db, folder, snapshot); await writeSidecar(folder, snapshot);
-    const result = await buildItem(db, loadEnv({ MEDIA_ROOT: box.media, CONFIG_DIR: box.config }), settingsSchema.parse({ tmdb_api_key: 'fixture', fanart_enabled: false }), { folder_path: folder }, {
+    const testing:NonNullable<Parameters<typeof buildItem>[4]> = {
       download: (url, path) => saveArtwork(path, Buffer.from(url)),
       send: async value => {
         const path = new URL(value).pathname;
@@ -34,12 +34,21 @@ test('root-video builder leaves readable tvshow.nfo and poster with complete epi
         if (!(path in responses)) throw new Error(`Unexpected fixture request: ${path}`);
         return { status: 200, headers: {}, body: Buffer.from(JSON.stringify(responses[path])) };
       },
-    });
+    };
+    const env=loadEnv({MEDIA_ROOT:box.media,CONFIG_DIR:box.config}),settings=settingsSchema.parse({tmdb_api_key:'fixture',fanart_enabled:false});
+    expect(settings.auto_sweep_orphans).toBe(false);
+    const result=await buildItem(db,env,settings,{folder_path:folder},testing);
     expect(result.status).toBe('complete');
     expect(await readFile(join(folder, 'tvshow.nfo'), 'utf8')).toContain('<tvshow>');
     expect(await readFile(join(folder, 'poster.jpg'), 'utf8')).toBe('https://image.tmdb.org/t/p/original/anime.jpg');
     expect(await classifyStatus(folder, 'series')).toMatchObject({ status: 'complete', missing: [], foreign: [], orphan_count: 0 });
     expect(await readFile(join(folder, 'Anime.S01E02.mkv'), 'utf8')).toBe('video 2');
     expect((await readdir(folder)).some(name => /season.*poster/i.test(name))).toBe(false);
+    await writeTree(folder,{'old.nfo':'orphan'});
+    await buildItem(db,env,settings,{folder_path:folder},testing);
+    expect(await readFile(join(folder,'old.nfo'),'utf8')).toBe('orphan');
+    await buildItem(db,env,{...settings,auto_sweep_orphans:true},{folder_path:folder},testing);
+    expect(await readdir(folder)).not.toContain('old.nfo');
+    expect(await readFile(join(folder,'tvshow.nfo'),'utf8')).toContain('<tvshow>');
   } finally { db.close(); }
 }));

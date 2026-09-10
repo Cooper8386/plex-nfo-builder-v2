@@ -21,6 +21,7 @@ import { scanLibrary } from '../scanner/scanner.js';
 import { classifyStatus } from '../scanner/status.js';
 import { effectiveSource } from '../matcher/effective-source.js';
 import type { StoredJob } from '../../queue/jobs-table.js';
+import { previewOrphans,applyOrphans } from '../orphans/orphans.js';
 
 export async function buildTarget(db: Database.Database, root: string, path: string, kind?: ItemKind, requireBinding=true) {
   const folder=await mediaPath(root,path), parts=relative(await mediaPath(root,'.'),folder).split(sep);
@@ -59,6 +60,7 @@ export async function buildItem(db:Database.Database,env:Env,settings:Settings,i
   if (!settings.include_original_title) data.original_title='';
   await writeNfos(folder,data,{...mappings,urls:written.urls,overrides:snapshot.overrides,tags:snapshot.custom_tags,overwriteForeign:settings.overwrite_foreign_nfo});
   const actors=await downloadActors(folder,data.cast,(url,path)=>artwork.download(url,path));
+  if(settings.auto_sweep_orphans)await applyOrphans(await previewOrphans(folder),true);
   await scanLibrary(db,env.media_root,library.name);
   const status=await classifyStatus(folder,binding.kind);
   const rootNfo=binding.kind==='series'?join(folder,'tvshow.nfo'):null;

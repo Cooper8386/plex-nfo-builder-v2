@@ -32,7 +32,7 @@ export const settingsSchema = z.object({
   rename_season_folder_template: z.string().default('Season {season:00}'),
   rename_movie_template: z.string().default('{Movie CleanTitle} {(Release Year)} {tmdb-{TmdbId}} {edition-{Edition Tags}} {[Custom Formats]}{[Quality Full]}{[MediaInfo 3D]}{[MediaInfo VideoDynamicRangeType]}{[Mediainfo AudioCodec}{ Mediainfo AudioChannels]}{[Mediainfo VideoCodec]}{-Release Group}'),
   rename_movie_folder_template: z.string().default('{Movie CleanTitle} ({Release Year}) {tmdb-{TmdbId}}'),
-  rename_enabled: z.boolean().default(true), auto_sweep_orphans: z.boolean().default(true),
+  rename_enabled: z.boolean().default(true), auto_sweep_orphans: z.boolean().default(false),
   tvdb_artwork_languages: languages.default([]), tmdb_artwork_languages: languages.default([]),
   tvdb_artwork_allow_null_language: z.boolean().default(true), tmdb_artwork_allow_null_language: z.boolean().default(true),
   watcher_enabled: z.boolean().nullable().default(null),

@@ -5,6 +5,8 @@ import { offLoop, workerModule } from '../fs/off-loop.js';
 import type { MatchInput } from './worker.js';
 import type { OverrideRequest, ClearOverridesRequest, OverridesResponse, OverrideResponse } from 'shared';
 import type { ArtworkInput } from '../artwork/artwork.js';
+import type { DangerInput } from '../cleaner/danger.js';
+import type { DangerResponse } from 'shared';
 export class MatcherClient {
   private pool = offLoop(workerModule('./worker.js',import.meta.url),{concurrency:1,timeoutMs:300_000});
   constructor(private env: Env, private settings: () => Settings) {}
@@ -19,5 +21,6 @@ export class MatcherClient {
   setOverride(payload: OverrideRequest) { return this.run<OverrideResponse>('overrides-set',payload); }
   clearOverrides(payload: ClearOverridesRequest) { return this.run<OverrideResponse>('overrides-clear',payload); }
   artwork<T>(payload: ArtworkInput) { return this.run<T>('artwork',payload); }
+  danger(payload:DangerInput) {return this.run<DangerResponse>('danger',payload);}
   close() { return this.pool.close(); }
 }
