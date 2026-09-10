@@ -29,14 +29,18 @@ export class TmdbClient {
     const data = row(await this.get(`/find/${encodeURIComponent(id)}`, { external_source: 'imdb_id' }));
     return rows(data[kind === 'series' ? 'tv_results' : 'movie_results']).map(r => result(r, kind));
   }
+  async languages() {
+    return rows(await this.get('/configuration/languages')).map(r=>({code:str(r.iso_639_1),name:str(r.english_name??r.name),native_name:str(r.name)}));
+  }
   async details(kind: ItemKind, id: string, options: { force?: boolean; language?: string } = {}): Promise<Metadata> {
     const root = `/${kindPath(kind)}/${encodeURIComponent(id)}`;
     const data = row(await this.get(root, { append_to_response: 'credits,images,external_ids', language: options.language }, options.force));
-    const ids = row(data.external_ids), seasons = [], episodes: Episode[] = [], art = artwork(data.images);
+    // Fetch the unfiltered images endpoint when metadata is translated, so original-language art remains available.
+    const ids = row(data.external_ids), seasons = [], episodes: Episode[] = [], art = artwork(options.language ? await this.get(`${root}/images`,{},options.force) : data.images);
     if (kind === 'series') for (const season of rows(data.seasons)) {
       const number = num(season.season_number) ?? 0;
       const detail = row(await this.get(`${root}/season/${number}`, { append_to_response: 'images', language: options.language }, options.force));
-      const seasonArt = artwork(detail.images, number);
+      const seasonArt = artwork(options.language ? await this.get(`${root}/season/${number}/images`,{},options.force) : detail.images, number);
       if (!seasonArt.length && season.poster_path) seasonArt.push(...artwork({ posters: [{ file_path: season.poster_path }] }, number));
       seasons.push({ id: str(season.id), season: number, title: str(detail.name ?? season.name), plot: str(detail.overview ?? season.overview), artwork: seasonArt });
       episodes.push(...rows(detail.episodes).map(episode)); art.push(...seasonArt);

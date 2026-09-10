@@ -4,6 +4,7 @@ import type { Settings } from '../../config/settings.js';
 import { offLoop, workerModule } from '../fs/off-loop.js';
 import type { MatchInput } from './worker.js';
 import type { OverrideRequest, ClearOverridesRequest, OverridesResponse, OverrideResponse } from 'shared';
+import type { ArtworkInput } from '../artwork/artwork.js';
 export class MatcherClient {
   private pool = offLoop(workerModule('./worker.js',import.meta.url),{concurrency:1,timeoutMs:300_000});
   constructor(private env: Env, private settings: () => Settings) {}
@@ -17,5 +18,6 @@ export class MatcherClient {
   overrides(path: string) { return this.run<OverridesResponse>('overrides-get',{folder_path:path}); }
   setOverride(payload: OverrideRequest) { return this.run<OverrideResponse>('overrides-set',payload); }
   clearOverrides(payload: ClearOverridesRequest) { return this.run<OverrideResponse>('overrides-clear',payload); }
+  artwork<T>(payload: ArtworkInput) { return this.run<T>('artwork',payload); }
   close() { return this.pool.close(); }
 }

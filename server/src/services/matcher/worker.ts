@@ -8,8 +8,11 @@ import { TmdbClient } from '../providers/tmdb.js';
 import { TvdbClient } from '../providers/tvdb.js';
 import { Matcher } from './matcher.js';
 import { overrideRequest, type OverrideInput } from '../nfo/overrides.js';
+import { ArtworkService, type ArtworkInput } from '../artwork/artwork.js';
+import { Providers } from '../providers/providers.js';
+import { FanartClient } from '../providers/fanart.js';
 
-export interface MatchInput { env: Env; settings: Settings; action: 'bind'|'source'|'secondary'|'unbind'|'bulk'|'search'|'overrides-get'|'overrides-set'|'overrides-clear'; payload: unknown }
+export interface MatchInput { env: Env; settings: Settings; action: 'bind'|'source'|'secondary'|'unbind'|'bulk'|'search'|'overrides-get'|'overrides-set'|'overrides-clear'|'artwork'; payload: unknown }
 let db: Database.Database | undefined, config: string | undefined, signature = '', providers: { tvdb:TvdbClient; tmdb:TmdbClient } | undefined;
 export async function handle(input: MatchInput) {
   if (!db) { db = await openDatabase(input.env.config_dir); config = input.env.config_dir; }
@@ -21,6 +24,7 @@ export async function handle(input: MatchInput) {
   }
   const matcher = new Matcher(db,input.env.media_root,input.settings,providers);
   switch (input.action) {
+    case 'artwork': return new ArtworkService(db,input.env.media_root,input.env.config_dir,input.settings,new Providers(providers.tvdb,providers.tmdb),new FanartClient(new ProviderHttp(db,keys.ttl),credential(input.settings,input.env,'fanart_api_key')??'')).request(input.payload as ArtworkInput);
     case 'overrides-get': return overrideRequest(db,input.env.media_root,'get',input.payload as OverrideInput);
     case 'overrides-set': return overrideRequest(db,input.env.media_root,'set',input.payload as OverrideInput);
     case 'overrides-clear': return overrideRequest(db,input.env.media_root,'clear',input.payload as OverrideInput);

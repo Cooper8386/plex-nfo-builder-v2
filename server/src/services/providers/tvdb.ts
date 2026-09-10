@@ -33,6 +33,9 @@ export class TvdbClient {
     const data = await this.get('/search', { query: title, type: kind, year, language, limit: 20 });
     return rows(data.data).map(r => result(r, kind));
   }
+  async languages() {
+    return rows((await this.get('/languages')).data).map(r=>({code:str(r.id),name:str(r.name),native_name:str(r.nativeName)}));
+  }
   async details(kind: ItemKind, id: string, options: { force?: boolean; language?: string } = {}): Promise<Metadata> {
     const root = `/${typePath(kind)}/${encodeURIComponent(id)}`;
     const data = row((await this.get(`${root}/extended`, { meta: 'translations' }, options.force)).data);

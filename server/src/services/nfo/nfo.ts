@@ -1,4 +1,4 @@
-import { basename, extname, join } from 'node:path';
+import { basename, extname, join, relative, sep } from 'node:path';
 import { readdir } from 'node:fs/promises';
 import type { MetadataSource } from 'shared';
 import type { Metadata, Episode, Season } from '../providers/normalized.js';
@@ -57,7 +57,9 @@ export async function writeNfos(folder: string, data: Metadata, options: NfoOpti
     } else {
       if (group.season !== null) {
         const season=data.seasons.find(s=>s.season===group.season)??{id:'',season:group.season,title:'',plot:'',artwork:[]};
-        const rendered=renderSeason(season,options); if(rendered) await write(join(group.path,'season.nfo'),rendered);
+        const seasonUrl=options.urls?.[`season-${String(group.season).padStart(2,'0')}-poster`]??'';
+        const poster=seasonUrl&&!/^[a-z][a-z0-9+.-]*:|^\//i.test(seasonUrl)?join(relative(group.path,folder),seasonUrl).split(sep).join('/'):seasonUrl;
+        const rendered=renderSeason(season,{...options,urls:{poster}}); if(rendered) await write(join(group.path,'season.nfo'),rendered);
       }
       for (const video of videos) {
         const parsed=parseEpisode(video.name);

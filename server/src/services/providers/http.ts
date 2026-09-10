@@ -11,31 +11,36 @@ export interface HttpReply { status: number; headers: Record<string, string>; bo
 export interface RequestOptions { method?: string; headers?: Record<string, string>; body?: string }
 export type Transport = (url: string, options: RequestOptions) => Promise<HttpReply>;
 // Validate every hop and pin the validated DNS answer for the actual connection.
-export const transport: Transport = async (value, options) => {
+export async function responseStream(value: string, options: RequestOptions = {}): Promise<http.IncomingMessage> {
   let current = value, headers = { ...options.headers };
   for (let hop = 0; hop < 6; hop++) {
     const { url, addresses } = await guardUrl(current);
-    const response = await new Promise<HttpReply>((resolve, reject) => {
+    const response = await new Promise<http.IncomingMessage>((resolve, reject) => {
       const req = (url.protocol === 'https:' ? https : http).request(url, {
         agent: url.protocol === 'https:' ? httpsAgent : httpAgent, method: options.method ?? 'GET', headers,
         lookup: (_hostname, opts, callback) => opts.all ? callback(null, addresses) : callback(null, addresses[0]!.address, addresses[0]!.family),
-      }, res => {
-        const chunks: Buffer[] = []; let size = 0;
-        res.on('data', (chunk: Buffer) => { size += chunk.length; if (size > 32 * 1024 * 1024) req.destroy(new Error('Provider response too large')); else chunks.push(chunk); });
-        res.on('error', reject);
-        res.on('end', () => resolve({ status: res.statusCode ?? 502, headers: Object.fromEntries(Object.entries(res.headers).map(([key, val]) => [key, Array.isArray(val) ? val.join(',') : val ?? ''])), body: Buffer.concat(chunks) }));
-      });
+      }, resolve);
       const timer = setTimeout(() => req.destroy(new Error('Provider request timed out')), 30_000);
       req.on('close', () => clearTimeout(timer)); req.on('error', reject);
       req.end(options.body);
     });
-    if (![301,302,303,307,308].includes(response.status)) return response;
+    if (![301,302,303,307,308].includes(response.statusCode ?? 502)) return response;
+    response.destroy();
     if (!response.headers.location || options.method === 'POST') throw new Error('Unexpected provider redirect');
     const next = new URL(response.headers.location, url);
     if (next.origin !== url.origin) headers = { Accept: headers.Accept ?? 'application/json' };
     current = next.href;
   }
   throw new Error('Too many provider redirects');
+}
+export const transport: Transport = async (value, options) => {
+  const response = await responseStream(value, options), chunks: Buffer[] = []; let size = 0;
+  for await (const chunk of response) {
+    const data = Buffer.from(chunk as Uint8Array); size += data.length;
+    if (size > 32 * 1024 * 1024) throw new Error('Provider response too large');
+    chunks.push(data);
+  }
+  return {status:response.statusCode ?? 502,headers:Object.fromEntries(Object.entries(response.headers).map(([key,val])=>[key,Array.isArray(val)?val.join(','):val??''])),body:Buffer.concat(chunks)};
 };
 export class ProviderError extends Error { constructor(public status: number) { super(`Provider returned HTTP ${status}`); } }
 export interface JsonOptions extends RequestOptions { force?: boolean; ttl?: number; cache404?: number; cache?: boolean }
