@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # The check target runs pnpm build, lint, typecheck and the full suite as UID 1000.
+      - name: Verify clean checkout
+        run: docker build --target check -t plex-nfo-builder-check .
+      - name: Build runtime
+        run: docker build -t plex-nfo-builder-test .
+      - name: Verify runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker logs plex-nfo-builder-test; docker rm -fv plex-nfo-builder-test' EXIT
+          docker run -d --name plex-nfo-builder-test -p 127.0.0.1:8765:8000 \
+            -e API_TOKEN=disposable-ci-token -e WATCHER_KILL_SWITCH=true plex-nfo-builder-test
+          curl --fail --retry 20 --retry-delay 1 --retry-all-errors \
+            -H 'X-API-Token: disposable-ci-token' http://127.0.0.1:8765/api/health
+          curl --fail http://127.0.0.1:8765/libraries/TV
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/health)" = 401
+          docker exec plex-nfo-builder-test sh -c 'test "$(id -u)" = 1000 && ffprobe -version'

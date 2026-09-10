@@ -25,10 +25,12 @@ import { installHostAllowlist } from './middleware/host-allowlist.js';
 import { ApiClient } from './services/api/client.js';
 import { apiRoutes } from './routes/api.js';
 import { ZodError } from 'zod';
+import { fileURLToPath } from 'node:url';
+import { spaRoutes } from './routes/spa.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
-export function createApp(options: { env?: Env; logger?: FastifyServerOptions['logger']; settings?: () => Settings } = {}) {
+export function createApp(options: { env?: Env; logger?: FastifyServerOptions['logger']; settings?: () => Settings;spaRoot?:string } = {}) {
   const env = options.env ?? loadEnv();
   let loadedSettings:Settings|undefined;
   const settings=()=>loadedSettings??options.settings?.()??settingsSchema.parse({});
@@ -61,6 +63,7 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   watcherRoutes(app,watcher,enabled=>saveSettings({watcher_enabled:enabled}),matcher);
   const scheduler=new Scheduler(env,builder);scheduleRoutes(app,scheduler);
   const api=new ApiClient(env,settings);apiRoutes(app,api,matcher,scanner,builder,watcher,env,settings,saveSettings,pkg.version);
+  spaRoutes(app,options.spaRoot??fileURLToPath(new URL('../../client/dist/',import.meta.url)));
   app.addHook('onClose',async()=>{await scheduler.close();await watcher.close();await api.close();await builder.close();await matcher.close();await scanner.close();});
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {

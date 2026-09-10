@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–21](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No real application media was modified. Current checkpoint: phases 1–21 complete, version 0.21.0; phase 22 has not started. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
+Scope: [issue #1, phases 1–22](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No real application media was modified. Current checkpoint: phases 1–22 implemented, version 0.22.0; phase 22 packaging validation and commit are recorded below. Milestone 2 has not started. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -25,6 +25,7 @@ Scope: [issue #1, phases 1–21](https://github.com/Cooper8386/plex-nfo-builder-
 | 19 | 0.19.0 | UTC cron, durable schedule actions, per-schedule run exclusion, CRUD/run-now and tracked results |
 | 20 | 0.20.0 | Remaining typed API routes, episode mapper/stills, poster progress/filter, safe paths/logs and contract errors |
 | 21 | 0.21.0 | Full frontend views, retained settings drafts, accessible confirmations and captured rename/custom-artwork/bulk-record previews |
+| 22 | 0.22.0 | Trimmed non-root container, ffprobe, production SPA, Compose, reusable CI, multi-arch publishing and release documentation |
 
 ESLint uses its current flat configuration (`eslint.config.js`) instead of the plan's legacy `.eslintrc.cjs`. The generic provider cache is named `provider_cache`. Seven rename defaults were read from the authorized old-app reference; template execution remains phase 17.
 
@@ -126,3 +127,15 @@ Phase 21 acceptance: client typecheck, lint, build and all 20 component tests pa
 Browser checks used disposable local media and cached provider fixtures. They covered light/dark desktop layouts, 390px mobile layouts without page overflow, manual season progress, real rename preview and cancellation, Cancel focus/Tab/Escape/trigger restoration, settings drafts across navigation, and exact library scroll restoration. Browser review caught and fixed unmount scroll capture, closed-dialog focus restoration, an oversized filter panel, incorrect folder links and the unbound matching provider default. Test servers, temporary fixtures and diagnostic output were removed. No real-media operation or push was performed.
 
 Phase 21 handoff: issue #1 records this phase's separate local main commit and final working-tree state. Historical checkpoint prose for phases 1–12 was shortened in the issue to fit GitHub's body limit; their steps, acceptance criteria and SHAs remain, with details here and in the existing session comment. Phase 22 packaging/release, rotating app-log production, automatic post-build Plex refresh and milestone 2 work remain unimplemented. Stop after phase 21.
+
+Phase 22 preflight (2026-09-10): issue #1 marks phases 1–21 complete. All 17 distinct recorded phase SHAs exist as ancestors of main; source spot checks match, including phase 21 views, draft preservation, confirmation and captured previews. Main was clean at ba306bc50f3227157a5146b512175acedcc8b35b, eighteen commits ahead of origin/main.
+
+Phase 22 (0.22.0): The multi-stage Dockerfile separates production dependencies from build tooling, builds the SPA and server, includes ffmpeg/ffprobe and tini, and runs as UID/GID 1000:1000 with /media and /config volumes. The runtime excludes source, development dependencies and secrets. Production SPA serving is the necessary server integration for phase 22 step 1; it serves deep links and built assets without converting API/docs misses to HTML or exposing outside files. A focused regression covers MIME types, auth, missing assets, links, dotfiles and dotted library names. No runtime dependency was added.
+
+Compose requires a token and explicit host media path, preserves the application environment names and mount targets, and refuses to create missing bind mounts. The README documents permissions, local configuration storage, token/host/CORS behavior, existing Plex SSRF limitations, deployment, backups and cutover-only reset. Reset remains a deliberate checkout CLI, absent from automatic startup and the trimmed runtime image.
+
+CI uses the Docker check target for frozen dependencies, build, lint, typecheck and the full suite under the non-root account, then checks the runtime. Pull requests and manual runs use CI directly; main/tag publication calls it as a reusable prerequisite. GHCR publication targets amd64/arm64 with main/edge and semver/latest tags; prereleases do not replace latest. Tagged GitHub releases use generated notes after verification. No image or release was published during implementation.
+
+Validation: root tests pass (202 passed, one existing Windows skip); lint, typecheck and build pass. The Linux check target passes all 203 tests, including permissions. The amd64 runtime starts, returns authenticated health and SPA deep links, has ffprobe and UID 1000, and contains no compiler, TypeScript dependency, application source or .env. Compose validation accepts configured paths and rejects an empty token. actionlint accepts all three workflows. Final clean-checkout and architecture verification, actual commit SHA and clean/local state are recorded in issue #1. Hosted Actions have not run without a push.
+
+Stop after phase 22. Rotating app-log production and automatic post-build Plex refresh remain the previously recorded unassigned plan gaps; no milestone 2 feature was added. Builds and tests used disposable fixtures only; the old repository and real media were untouched.

@@ -1,0 +1,37 @@
+services:
+  plex-nfo-builder:
+    image: ghcr.io/cooper8386/plex-nfo-builder-v2:${IMAGE_TAG:-edge}
+    build: .
+    ports:
+      - "${HOST_PORT:-8765}:${LISTEN_PORT:-8000}"
+    environment:
+      API_TOKEN: ${API_TOKEN:?Set a strong API_TOKEN in .env before starting}
+      MEDIA_ROOT: /media
+      CONFIG_DIR: /config
+      LISTEN_HOST: ${LISTEN_HOST:-0.0.0.0}
+      LISTEN_PORT: ${LISTEN_PORT:-8000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-America/Chicago}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-}
+      TVDB_API_KEY: ${TVDB_API_KEY:-}
+      TVDB_PIN: ${TVDB_PIN:-}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      FANART_API_KEY: ${FANART_API_KEY:-}
+      PLEX_TOKEN: ${PLEX_TOKEN:-}
+      WATCHER_ENABLED: ${WATCHER_ENABLED:-true}
+      WATCHER_DEBOUNCE_SECONDS: ${WATCHER_DEBOUNCE_SECONDS:-30}
+      WATCHER_MAX_INFLIGHT: ${WATCHER_MAX_INFLIGHT:-2}
+      WATCHER_KILL_SWITCH: ${WATCHER_KILL_SWITCH:-false}
+    volumes:
+      - type: bind
+        source: ${MEDIA_PATH:?Set MEDIA_PATH to the host media directory}
+        target: /media
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${CONFIG_PATH:-./config}
+        target: /config
+        bind:
+          create_host_path: false
+    restart: unless-stopped
