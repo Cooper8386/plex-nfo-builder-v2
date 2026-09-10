@@ -1,4 +1,4 @@
-import type { Binding, ItemKind, LibraryKind, Provider } from './index.js';
+import type { Binding, ItemKind, LibraryKind, Provider,SeasonPosterProgress } from './index.js';
 
 export type NfoStatus = 'none' | 'partial' | 'complete' | 'foreign' | 'mixed';
 export interface Item {
@@ -20,6 +20,7 @@ export interface Item {
   orphan_count: number;
   date_added: number;
   date_updated: number | null;
+  season_poster_progress?:SeasonPosterProgress;
 }
 export interface ItemsQuery {
   library?: string;
@@ -27,6 +28,7 @@ export interface ItemsQuery {
   status?: string;
   q?: string;
   hide_organized?: boolean;
+  poster_selection?:'all'|'needs_selection'|'selected';
 }
 export interface ItemsResponse { items: Item[] }
 export interface ItemQuery { path: string }
@@ -42,4 +44,5 @@ export interface ItemDetailResponse {
   provider_used: Provider | null;
   tags: { tvdb: string[]; tmdb: string[]; custom: string[] };
   library_kind: LibraryKind | null;
+  season_poster_progress:SeasonPosterProgress;
 }

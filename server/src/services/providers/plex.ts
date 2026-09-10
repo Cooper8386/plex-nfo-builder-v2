@@ -10,12 +10,19 @@ export function translatePath(path: string, mappings: { from: string; to: string
 export class PlexClient {
   constructor(private http: ProviderHttp, private url: string, private token: string) {}
   private get(path: string, query: Record<string,string> = {}) { return this.http.json(apiUrl(this.url, path, query), { cache: false, headers: { 'X-Plex-Token': this.token, Accept: 'application/json' } }); }
+  async identityOrThrow() {
+    const data = row(row(await this.get('/identity')).MediaContainer);
+    return { machine_identifier: str(data.machineIdentifier), version: str(data.version), friendly_name: str(data.friendlyName) };
+  }
   async identity() {
-    try { const data = row(row(await this.get('/identity')).MediaContainer); return { machine_identifier: str(data.machineIdentifier), version: str(data.version), friendly_name: str(data.friendlyName) }; }
+    try { return await this.identityOrThrow(); }
     catch { return null; }
   }
+  async sectionsOrThrow(): Promise<PlexSection[]> {
+    return rows(row(row(await this.get('/library/sections')).MediaContainer).Directory).map(d => ({ id:str(d.key), title:str(d.title), type:str(d.type), locations:rows(d.Location).map(l => str(l.path)) }));
+  }
   async sections(): Promise<PlexSection[]> {
-    try { return rows(row(row(await this.get('/library/sections')).MediaContainer).Directory).map(d => ({ id:str(d.key), title:str(d.title), type:str(d.type), locations:rows(d.Location).map(l => str(l.path)) })); }
+    try { return await this.sectionsOrThrow(); }
     catch { return []; }
   }
   async refresh(path: string, mappings: { from: string; to: string }[] = []) {

@@ -8,7 +8,9 @@ import type { ArtworkInput } from '../artwork/artwork.js';
 import type { DangerInput } from '../cleaner/danger.js';
 import type { DangerResponse } from 'shared';
 import type { RenameRequest } from 'shared';
+import type { ApiInput } from '../api/worker.js';
 export class MatcherClient {
+  api<T>(payload:ApiInput){return this.run<T>('api',payload);}
   private pool = offLoop(workerModule('./worker.js',import.meta.url),{concurrency:1,timeoutMs:300_000});
   constructor(private env: Env, private settings: () => Settings) {}
   private run<T>(action: MatchInput['action'], payload: unknown) { return this.pool.run<T>({action,payload,env:this.env,settings:this.settings()} satisfies MatchInput); }

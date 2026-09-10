@@ -21,6 +21,10 @@ import { Watcher } from './services/watcher/watcher.js';
 import { watcherRoutes } from './routes/watcher.js';
 import { Scheduler } from './services/scheduler/scheduler.js';
 import { scheduleRoutes } from './routes/schedules.js';
+import { installHostAllowlist } from './middleware/host-allowlist.js';
+import { ApiClient } from './services/api/client.js';
+import { apiRoutes } from './routes/api.js';
+import { ZodError } from 'zod';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -38,9 +42,7 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
     },
   });
   installAuth(app, env.api_token);
-  if (env.trusted_hosts.length) app.addHook('onRequest', async (request, reply) => {
-    if (!env.trusted_hosts.includes(request.hostname.toLowerCase())) return reply.code(400).send({ detail: 'Invalid Host header' });
-  });
+  installHostAllowlist(app,env.trusted_hosts);
   if (env.cors_allow_origins.length) app.register(cors, { origin: env.cors_allow_origins });
   healthRoutes(app, env, settings, pkg.version);
   const scanner = new ScannerClient(env, settings,()=>{void watcher?.reload().catch(()=>app.log.error('Watcher reload failed'));});
@@ -58,9 +60,12 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   const saveSettings=async(patch:Partial<Settings>)=>{loadedSettings=await store.save(patch);};
   watcherRoutes(app,watcher,enabled=>saveSettings({watcher_enabled:enabled}));
   const scheduler=new Scheduler(env,builder);scheduleRoutes(app,scheduler);
-  app.addHook('onClose',async()=>{await scheduler.close();await watcher.close();await builder.close();await matcher.close();await scanner.close();});
+  const api=new ApiClient(env,settings);apiRoutes(app,api,matcher,scanner,builder,watcher,env,settings,saveSettings,pkg.version);
+  app.addHook('onClose',async()=>{await scheduler.close();await watcher.close();await api.close();await builder.close();await matcher.close();await scanner.close();});
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
+    if(error instanceof ZodError)return reply.code(422).send({detail:'Invalid settings or request values'});
+    if(error.message.startsWith('API validation:'))return reply.code(400).send({detail:error.message});
     const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Schedule validation:') || error.message.startsWith('Watcher validation:') || error.message.startsWith('Rename validation:') || error.message.startsWith('Danger validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Schedule not found' || error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     reply.code(status).send({ detail: status === 500 ? 'Internal server error' : error.message });
   });

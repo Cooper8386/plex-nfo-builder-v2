@@ -36,7 +36,7 @@ test('items exclude stale and preserve nullable binding and scan data', () => {
   expectTypeOf<Item['date_added']>().toEqualTypeOf<number>();
   expectTypeOf<Item['date_updated']>().toEqualTypeOf<number | null>();
   expectTypeOf<ItemsResponse>().toEqualTypeOf<{ items: Item[] }>();
-  expectTypeOf<ItemsQuery>().toEqualTypeOf<{ library?: string; status?: string; q?: string; hide_organized?: boolean }>();
+  expectTypeOf<ItemsQuery>().toEqualTypeOf<{ library?: string; status?: string; q?: string; hide_organized?: boolean;poster_selection?:'all'|'needs_selection'|'selected' }>();
   expectTypeOf<ItemDetailResponse['binding']>().toEqualTypeOf<Binding | null>();
   expectTypeOf<ItemDetailResponse['state']>().toEqualTypeOf<Item | null>();
 });

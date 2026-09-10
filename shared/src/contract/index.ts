@@ -21,3 +21,4 @@ export type * from './danger.js';
 export type * from './rename.js';
 export type * from './watcher.js';
 export type * from './schedule.js';
+export type * from './api.js';

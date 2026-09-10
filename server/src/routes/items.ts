@@ -6,6 +6,7 @@ export function itemRoutes(app: FastifyInstance, scanner: ScannerClient) {
   app.get<{ Querystring: ItemsQuery; Reply: ItemsResponse }>('/api/items', {
     schema: { querystring: { type: 'object', properties: {
       library: { type: 'string' }, status: { type: 'string' }, q: { type: 'string' }, hide_organized: { type: 'boolean' },
+      poster_selection: { enum: ['all', 'needs_selection', 'selected'] },
     } } },
   }, async request => ({ items: await scanner.items(request.query) }));
   app.get<{ Querystring: ItemQuery; Reply: NfoExplanation }>('/api/items/nfo-explain', {

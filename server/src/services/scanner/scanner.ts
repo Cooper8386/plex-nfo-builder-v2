@@ -4,11 +4,12 @@ import type Database from 'better-sqlite3';
 import type { Item, Library, LibraryKind, MetadataSource, NfoExplanation, UpdateLibraryRequest, ItemsQuery } from 'shared';
 import { z } from 'zod';
 import { openDatabase } from '../../db/connection.js';
-import { getBinding } from '../../db/queries.js';
+import { folderSnapshot, getBinding } from '../../db/queries.js';
 import { mediaPath } from '../../config/paths.js';
 import { recoverSidecar } from '../sidecar/sidecar.js';
 import { classifyStatus } from './status.js';
 import { detectKind, mediaFolders } from './layout.js';
+import { seasonPosterProgress } from '../artwork/season-posters.js';
 
 let db: Database.Database | undefined;
 let config: string | undefined;
@@ -85,8 +86,27 @@ export async function handle(input: Input) {
     const query = input.query ?? {};
     const rows = db.prepare('SELECT * FROM item_state WHERE (? IS NULL OR library=?) ORDER BY sort_title COLLATE NOCASE,folder_path').all(query.library ?? null, query.library ?? null) as Item[];
     const statuses = query.status?.split(',').filter(Boolean);
-    return rows.filter(row => (!statuses?.length || statuses.includes(row.nfo_status)) &&
+    const items = rows.filter(row => (!statuses?.length || statuses.includes(row.nfo_status)) &&
       (!query.q || (row.title ?? '').toLowerCase().includes(query.q.toLowerCase())) && (!query.hide_organized || row.nfo_status !== 'complete'));
+    for (const item of items) {
+      if (item.kind === 'movie') {
+        item.season_poster_progress = { state: 'not_applicable', required_seasons: [], selected_seasons: [], missing_seasons: [], unresolved_files: [] };
+        continue;
+      }
+      try {
+        const folder = await mediaPath(input.mediaRoot, item.folder_path), snapshot = folderSnapshot(db, folder);
+        item.season_poster_progress = await seasonPosterProgress(folder, snapshot.artwork_selections, snapshot.episode_file_overrides);
+      } catch (error) {
+        // Keep stale or temporarily inaccessible items visible without claiming their posters are selected.
+        if (!['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '') && (error as Error).message !== 'Path outside MEDIA_ROOT') throw error;
+      }
+    }
+    return items.filter(item => {
+      const state = item.season_poster_progress?.state;
+      if (query.poster_selection === 'selected') return state === 'selected';
+      if (query.poster_selection === 'needs_selection') return item.kind === 'series' && state !== 'selected' && state !== 'not_applicable';
+      return true;
+    });
   }
   if (input.action === 'explain') {
     const folder = await mediaPath(input.mediaRoot, input.path!);

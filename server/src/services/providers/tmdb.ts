@@ -16,6 +16,8 @@ function artwork(value: unknown, season: number | null = null): Artwork[] {
 function result(r: Row, kind: ItemKind): SearchResult { return { provider: 'tmdb', id: str(r.id), kind, title: str(r.name ?? r.title), year: yearOf(r.first_air_date ?? r.release_date), plot: str(r.overview), image: image(r.poster_path) }; }
 function episode(r: Row): Episode { return { id: str(r.id), season: num(r.season_number) ?? 0, episode: num(r.episode_number) ?? 0, title: str(r.name), plot: str(r.overview), aired: str(r.air_date) || null, runtime: num(r.runtime), image: image(r.still_path) }; }
 export class TmdbClient {
+  async keywords(kind:ItemKind,id:string){const data=row(await this.get(`/${kindPath(kind)}/${encodeURIComponent(id)}/keywords`));return rows(data.results??data.keywords).map(value=>str(value.name)).filter(Boolean);}
+  async episodeImages(id:string,season:number,episode:number){return artwork(await this.get(`/tv/${encodeURIComponent(id)}/season/${season}/episode/${episode}/images`));}
   constructor(private http: ProviderHttp, private key: string, private base = 'https://api.themoviedb.org/3') {}
   private get(path: string, query: Record<string, string | number | undefined> = {}, force = false) {
     if (!this.key) throw new Error('TMDB API key is not configured');

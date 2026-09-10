@@ -19,7 +19,8 @@ test('scheduler executes every action through the queue, supports all-library up
     for(const action of ['scan_only','match_only','build_only','match_and_build','full'] as const){
       const {schedule}=await scheduler.create({library:'TV',cron:'* * * * *',action,enabled:false});
       const result=await scheduler.runNow(schedule.id);expect(result.job).toBeTruthy();
-      await expect.poll(async()=>(await builder.queue.get(result.job!))?.status).toBe('completed');
+      // A cold worker can exceed Vitest's one-second poll default in the full suite.
+      await expect.poll(async()=>(await builder.queue.get(result.job!))?.status,{timeout:10000}).toBe('completed');
       const row=(await scheduler.list()).find(r=>r.id===schedule.id)!;expect(row.last_status).toBe('ok');
       expect(row.last_message).toContain(action.includes('build')||action==='full'?'builds_queued=1':'builds_queued=0');
     }
@@ -30,7 +31,7 @@ test('scheduler executes every action through the queue, supports all-library up
     const sunday=new Date('2026-09-13T00:00:00Z');await scheduler.tick(sunday);await scheduler.tick(sunday);
     expect((await builder.queue.list()).filter(job=>job.folder===`schedule:${schedule.id}`)).toHaveLength(1);
     const queued=(await builder.queue.list()).filter(job=>job.folder===`schedule:${schedule.id}`)[0]!;
-    await expect.poll(async()=>(await builder.queue.get(queued.id))?.status).toBe('completed');
+    await expect.poll(async()=>(await builder.queue.get(queued.id))?.status,{timeout:10000}).toBe('completed');
     const enqueue=builder.queue.enqueue.bind(builder.queue);
     const delayed=vi.spyOn(builder.queue,'enqueue').mockImplementation(async(...args)=>{await new Promise(r=>setTimeout(r,50));return enqueue(...args);});
     const concurrent=await Promise.all([scheduler.runNow(schedule.id),scheduler.runNow(schedule.id)]);

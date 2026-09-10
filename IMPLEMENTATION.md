@@ -1,6 +1,6 @@
 # Milestone 1 checkpoint
 
-Scope: [issue #1, phases 1–19](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified. Current checkpoint: phases 1–19 complete, version 0.19.0; phase 20 is next. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
+Scope: [issue #1, phases 1–20](https://github.com/Cooper8386/plex-nfo-builder-v2/issues/1). Reference: root `REPO_SPEC.md`; old repository read only for settings defaults, normalization, and API response shapes. No application media was modified. Current checkpoint: phases 1–20 complete, version 0.20.0; phase 21 is next and has not started. Each phase from 6 onward has its own local main commit; issue #1 records exact SHAs and push state. Earlier phase notes below are historical validation records.
 
 | Phase | Version | Implementation |
 | --- | --- | --- |
@@ -23,6 +23,7 @@ Scope: [issue #1, phases 1–19](https://github.com/Cooper8386/plex-nfo-builder-
 | 17 | 0.17.0 | Sonarr/Radarr rename grammar, checked-subset apply, companions/mapping migration and atomic no-replace moves |
 | 18 | 0.18.0 | Recursive off-loop watcher, stable-media debounce, real queue handoff, review retry and live toggle/status |
 | 19 | 0.19.0 | UTC cron, durable schedule actions, per-schedule run exclusion, CRUD/run-now and tracked results |
+| 20 | 0.20.0 | Remaining typed API routes, episode mapper/stills, poster progress/filter, safe paths/logs and contract errors |
 
 ESLint uses its current flat configuration (`eslint.config.js`) instead of the plan's legacy `.eslintrc.cjs`. The generic provider cache is named `provider_cache`. Seven rename defaults were read from the authorized old-app reference; template execution remains phase 17.
 
@@ -100,3 +101,11 @@ Phase 19 (0.19.0): Five-field UTC cron supports numeric lists/ranges/steps and S
 All actions refresh local scans as the reference does. match_only/match_and_build/full match unbound folders; build_only/match_and_build/full enqueue bound incomplete folders. A schedule's ok status means its action completed and child builds were submitted, not that every child build succeeded; each child has its own durable status. Manual run-now can run a disabled schedule. Null library targets all enabled libraries; PATCH null correctly clears a prior specific scope. Review fixed two simultaneous run-now calls claiming the same new run after an earlier completed job.
 
 Phase 19 acceptance: cron and scheduler tests pass, covering all five actions through the actual queue, same-minute suppression, simultaneous run-now, nullable library updates and route statuses. Full suite: 171 passed, one Windows skip; typecheck/lint/build pass. Issue #1 records the separate commit and clean/local state. No UI, real-media work or push. Phase 20 is next.
+
+Phase 20 (0.20.0): Remaining API routes cover settings/version, browse, detail/tags, database-only removal, background library scans, jobs/logs, episode mapping/stills, TVDB helpers/cache and Plex. Read requests use a separate worker pool; sidecar mutations share the existing serial matcher worker. Detail counts distinct provider episodes matched to local files using the same selector as the builder, including root videos. Poster progress and the optional all/needs_selection/selected filter remain independent of NFO status. Movies report not_applicable; inaccessible series stay visible and conservatively count as needing selection. No phase 21 view controls were added.
+
+Path validation rejects lexical escapes before checking disk, then checks canonical paths and missing paths' nearest existing ancestors; missing in-root targets retain 404. Logs reject symlinks and redact tokens; app-log tails are bounded. Jobs expose only the public contract and return the newest 200. Worker failures preserve HTTP status, including sanitized Zod validation failures. Plex keeps the reference summary shape and partial-scan fallback behavior, including its diagnostic warning; the existing SSRF rules still apply.
+
+Phase 20 acceptance: eight contract tests pass, covering 400/401/404/413/422/500/502/503, protected docs, query-token auth, settings redaction, job payload exclusion and missing-path/junction boundaries. Full suite: 188 passed, one Windows permissions skip. Typecheck, lint and build pass. A full-suite scheduler assertion exceeded the default one-second poll but passed in isolation; its bounded poll is now ten seconds to allow cold-worker startup, without changing production scheduling. Issue #1 records the separate commit and actual tree/push state. Stop before phase 21.
+
+Handoff: the app-log endpoint reads an existing app.log and returns an empty list when absent. Rotating app-log production and the spec's automatic post-build Plex refresh are not assigned implementation steps in the current issue; this phase adds the documented log/manual Plex API only. Assign these remaining spec requirements in the plan before implementing them. Automatic orphan cleanup remains disabled until explicitly enabled; automatic matching poster sets remain milestone 2 phase 26.

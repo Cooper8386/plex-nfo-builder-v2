@@ -34,13 +34,13 @@ export class WorkerPool {
     let stderr = '';
     child.stderr?.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-2000); });
     slot.timer = setTimeout(() => { child.kill(); }, this.timeoutMs);
-    child.on('message', (message: { ready?: string; id?: string; result?: unknown; error?: string }) => {
+    child.on('message', (message: { ready?: string; id?: string; result?: unknown; error?: string;statusCode?:number }) => {
       if (message.ready) { clearTimeout(slot.timer); slot.ready = true; this.dispatch(); return; }
       if (!slot.task || message.id !== slot.task.id) return;
       clearTimeout(slot.timer);
       const task = slot.task;
       slot.task = undefined;
-      if (message.error !== undefined) task.reject(new Error(message.error)); else task.resolve(message.result);
+      if (message.error !== undefined) task.reject(Object.assign(new Error(message.error),{statusCode:message.statusCode})); else task.resolve(message.result);
       this.dispatch();
     });
     child.on('error', error => { slot.task?.reject(error); slot.task = undefined; child.kill(); });

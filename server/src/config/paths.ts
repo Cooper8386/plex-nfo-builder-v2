@@ -1,5 +1,5 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { realpath } from 'node:fs/promises';
+import { pathBoundary } from '../middleware/path-boundary.js';
 
 export function configPaths(configDir: string) {
   const root = resolve(configDir);
@@ -15,7 +15,5 @@ export function isWithin(root: string, path: string) {
 }
 
 export async function mediaPath(root: string, path: string) {
-  const [base, target] = await Promise.all([realpath(root), realpath(resolve(root, path))]);
-  if (!isWithin(base, target)) throw new Error('Path outside MEDIA_ROOT');
-  return target;
+  return pathBoundary(root,path);
 }
