@@ -19,3 +19,4 @@ export type * from './artwork.js';
 export type * from './build.js';
 export type * from './danger.js';
 export type * from './rename.js';
+export type * from './watcher.js';

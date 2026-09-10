@@ -2,7 +2,8 @@ import Fastify, { type FastifyError, type FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import { installAuth, safeUrl } from './middleware/auth.js';
 import { loadEnv, type Env } from './config/env.js';
-import { settingsSchema, type Settings } from './config/settings.js';
+import { SettingsStore,settingsSchema, type Settings } from './config/settings.js';
+import { configPaths } from './config/paths.js';
 import { healthRoutes } from './routes/health.js';
 import { createRequire } from 'node:module';
 import { ScannerClient } from './services/scanner/client.js';
@@ -16,11 +17,16 @@ import { BuilderClient } from './services/builder/client.js';
 import { buildRoutes } from './routes/build.js';
 import { dangerRoutes } from './routes/danger.js';
 import { renameRoutes } from './routes/rename.js';
+import { Watcher } from './services/watcher/watcher.js';
+import { watcherRoutes } from './routes/watcher.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
 export function createApp(options: { env?: Env; logger?: FastifyServerOptions['logger']; settings?: () => Settings } = {}) {
   const env = options.env ?? loadEnv();
+  let loadedSettings:Settings|undefined;
+  const settings=()=>loadedSettings??options.settings?.()??settingsSchema.parse({});
+  const store=new SettingsStore(configPaths(env.config_dir).settings);
   const app = Fastify({
     logger: options.logger === false ? false : {
       level: env.log_level.toLowerCase().replace('warning', 'warn'),
@@ -34,25 +40,26 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
     if (!env.trusted_hosts.includes(request.hostname.toLowerCase())) return reply.code(400).send({ detail: 'Invalid Host header' });
   });
   if (env.cors_allow_origins.length) app.register(cors, { origin: env.cors_allow_origins });
-  healthRoutes(app, env, options.settings ?? (() => settingsSchema.parse({})), pkg.version);
-  const scanner = new ScannerClient(env, options.settings ?? (() => settingsSchema.parse({})));
+  healthRoutes(app, env, settings, pkg.version);
+  const scanner = new ScannerClient(env, settings,()=>{void watcher?.reload().catch(()=>app.log.error('Watcher reload failed'));});
   libraryRoutes(app, scanner);
   itemRoutes(app, scanner);
-  const matcher = new MatcherClient(env, options.settings ?? (() => settingsSchema.parse({})));
+  const matcher = new MatcherClient(env, settings);
   matchRoutes(app, matcher);
   overrideRoutes(app, matcher);
   artworkRoutes(app, matcher);
   dangerRoutes(app,matcher);
   renameRoutes(app,matcher);
-  const builder=new BuilderClient(env,options.settings??(()=>settingsSchema.parse({})));
+  const builder=new BuilderClient(env,settings);
   buildRoutes(app,builder);
-  app.addHook('onClose',()=>builder.close());
-  app.addHook('onClose', () => matcher.close());
-  app.addHook('onClose', () => scanner.close());
+  const watcher=new Watcher(env,settings,scanner,matcher,builder);
+  const saveSettings=async(patch:Partial<Settings>)=>{loadedSettings=await store.save(patch);};
+  watcherRoutes(app,watcher,enabled=>saveSettings({watcher_enabled:enabled}));
+  app.addHook('onClose',async()=>{await watcher.close();await builder.close();await matcher.close();await scanner.close();});
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ detail: 'Not found' }));
   app.setErrorHandler<FastifyError>((error, _request, reply) => {
-    const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Rename validation:') || error.message.startsWith('Danger validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    const status = error.validation ? 422 : error.message === 'Artwork too large' ? 413 : error.message === 'Path outside MEDIA_ROOT' || error.message.startsWith('Match validation:') || error.message.startsWith('NFO validation:') || error.message.startsWith('Artwork validation:') || error.message.startsWith('Build validation:') || error.message.startsWith('Watcher validation:') || error.message.startsWith('Rename validation:') || error.message.startsWith('Danger validation:') || error.message.startsWith('Unsafe URL') ? 400 : error.message.startsWith('Provider returned HTTP') ? 502 : error.message === 'Library not found' || error.message === 'Artwork file not found' || error.message.includes('ENOENT:') ? 404 : error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     reply.code(status).send({ detail: status === 500 ? 'Internal server error' : error.message });
   });
-  return Object.assign(app, { scanner, matcher, builder });
+  return Object.assign(app, { scanner, matcher, builder,watcher,settings,saveSettings,loadSettings:async()=>{loadedSettings=await store.load();} });
 }
