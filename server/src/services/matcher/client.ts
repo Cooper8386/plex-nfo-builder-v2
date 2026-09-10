@@ -3,6 +3,7 @@ import type { Env } from '../../config/env.js';
 import type { Settings } from '../../config/settings.js';
 import { offLoop, workerModule } from '../fs/off-loop.js';
 import type { MatchInput } from './worker.js';
+import type { OverrideRequest, ClearOverridesRequest, OverridesResponse, OverrideResponse } from 'shared';
 export class MatcherClient {
   private pool = offLoop(workerModule('./worker.js',import.meta.url),{concurrency:1,timeoutMs:300_000});
   constructor(private env: Env, private settings: () => Settings) {}
@@ -13,5 +14,8 @@ export class MatcherClient {
   unbind(path: string) { return this.run<UnbindResponse>('unbind',path); }
   bulk(payload: AutoBulkRequest) { return this.run<AutoBulkResponse>('bulk',payload); }
   search(payload: MatchSearchQuery) { return this.run<MatchSearchResponse>('search',payload); }
+  overrides(path: string) { return this.run<OverridesResponse>('overrides-get',{folder_path:path}); }
+  setOverride(payload: OverrideRequest) { return this.run<OverrideResponse>('overrides-set',payload); }
+  clearOverrides(payload: ClearOverridesRequest) { return this.run<OverrideResponse>('overrides-clear',payload); }
   close() { return this.pool.close(); }
 }

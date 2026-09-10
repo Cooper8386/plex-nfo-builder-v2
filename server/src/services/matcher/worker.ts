@@ -7,8 +7,9 @@ import { ProviderHttp } from '../providers/http.js';
 import { TmdbClient } from '../providers/tmdb.js';
 import { TvdbClient } from '../providers/tvdb.js';
 import { Matcher } from './matcher.js';
+import { overrideRequest, type OverrideInput } from '../nfo/overrides.js';
 
-export interface MatchInput { env: Env; settings: Settings; action: 'bind'|'source'|'secondary'|'unbind'|'bulk'|'search'; payload: unknown }
+export interface MatchInput { env: Env; settings: Settings; action: 'bind'|'source'|'secondary'|'unbind'|'bulk'|'search'|'overrides-get'|'overrides-set'|'overrides-clear'; payload: unknown }
 let db: Database.Database | undefined, config: string | undefined, signature = '', providers: { tvdb:TvdbClient; tmdb:TmdbClient } | undefined;
 export async function handle(input: MatchInput) {
   if (!db) { db = await openDatabase(input.env.config_dir); config = input.env.config_dir; }
@@ -20,6 +21,9 @@ export async function handle(input: MatchInput) {
   }
   const matcher = new Matcher(db,input.env.media_root,input.settings,providers);
   switch (input.action) {
+    case 'overrides-get': return overrideRequest(db,input.env.media_root,'get',input.payload as OverrideInput);
+    case 'overrides-set': return overrideRequest(db,input.env.media_root,'set',input.payload as OverrideInput);
+    case 'overrides-clear': return overrideRequest(db,input.env.media_root,'clear',input.payload as OverrideInput);
     case 'bind': return matcher.bind(input.payload as BindRequest);
     case 'source': return matcher.source(input.payload as SetSourceRequest);
     case 'secondary': return matcher.secondary(input.payload as SetSecondaryRequest);

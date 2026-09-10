@@ -14,3 +14,4 @@ export type * from './job.js';
 export type * from './settings.js';
 export type * from './status.js';
 export type * from './match.js';
+export type * from './overrides.js';
