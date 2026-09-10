@@ -3,3 +3,8 @@ export interface DangerRequest {folder_path?:string;library?:string;dry_run?:boo
 export interface DangerPreview {dry_run:true;preview_id:string;files:string[];folders:string[];skipped:{path:string;reason:string}[]}
 export interface DangerResult {ok:true;removed:string[];skipped:{path:string;reason:string}[]}
 export type DangerResponse=DangerPreview|DangerResult;
+export type RecordOperation='custom-delete'|'library-delete'|'review-clear'|'overrides-clear'|'artwork-clear'|'cache-clear';
+export interface RecordRequest {op:RecordOperation;folder_path?:string;library?:string;id?:string;scope?:string;field?:string;dry_run?:boolean;preview_id?:string;confirm?:boolean}
+export interface RecordPreview {dry_run:true;preview_id:string;targets:string[];files:string[]}
+export interface RecordResult {ok:true;removed:number;skipped:number}
+export type RecordResponse=RecordPreview|RecordResult;

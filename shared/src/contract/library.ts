@@ -21,5 +21,5 @@ export interface UpdateLibraryResponse extends OkResponse {
   library: Library;
   effective_metadata_source: MetadataSource;
 }
-export interface DeleteLibraryResponse extends OkResponse { items: number; bindings: number }
+export type DeleteLibraryResponse = import('./danger.js').RecordResponse;
 export interface ScanLibraryResponse extends OkResponse { scheduled: true }

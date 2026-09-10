@@ -3,12 +3,13 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Shell } from '../app/Shell.js';
 import { api } from '../lib/api.js';
 import { libraryUrl } from './index.js';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); localStorage.clear(); delete document.documentElement.dataset.theme; });
+beforeEach(()=>{vi.spyOn(window,'scrollTo').mockImplementation(()=>{});});
 
 function renderAt(path: string, name = 'TV & Anime') {
   vi.spyOn(api, 'health').mockResolvedValue({ ok: true, version: '0.12.0', media_root: '/media', tvdb_configured: true, tmdb_configured: false, fanart_configured: false, metadata_source: 'tvdb', plex_configured: false, plex_auto_refresh: false });
@@ -23,8 +24,10 @@ test('a linked library opens directly, renders real items, and navigates back to
   renderAt(libraryUrl('TV & Anime'));
   const main = within(screen.getByRole('main'));
   expect(await main.findByRole('heading', { level: 1, name: 'TV & Anime' })).toBeTruthy();
+  expect(await main.findByRole('link', { name: /Arrival/ })).toBeTruthy();
+  await user.click(main.getByRole('button', { name: 'List' }));
   expect(await main.findByRole('rowheader', { name: /Arrival/ })).toBeTruthy();
-  expect(main.getByText('Complete')).toBeTruthy();
+  expect(main.getAllByText('Complete').length).toBeGreaterThan(0);
   expect(items).toHaveBeenCalledWith({ library: 'TV & Anime' }, expect.any(AbortSignal));
   await user.click(main.getByRole('link', { name: 'All libraries' }));
   expect(await main.findByRole('heading', { name: 'Your libraries' })).toBeTruthy();

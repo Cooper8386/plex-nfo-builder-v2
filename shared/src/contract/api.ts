@@ -16,7 +16,7 @@ export interface PlexTestResponse {ok:boolean;error?:string;identity?:PlexIdenti
 export interface PlexRefreshRequest {path:string;delay_seconds?:number}
 export interface PlexSectionsResponse {sections:PlexSection[]}
 export interface PlexRefreshResponse {requested_local_path:string;translated_path:string|null;section_id:string|null;section_title:string|null;refreshed:boolean;error:string|null;rating_key:string|null;item_title:string|null;strategy:'metadata-refresh'|'partial-scan-only'|null;item_count?:number}
-export interface CacheClearResponse {cleared:number}
+export type CacheClearResponse = import('./danger.js').RecordResponse;
 export interface VersionResponse {version:string;name:string;repo:string}
 export interface LogResponse {lines:string[]}
 export type ProviderPayload=Record<string,unknown>;

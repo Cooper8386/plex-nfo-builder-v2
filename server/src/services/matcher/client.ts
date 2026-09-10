@@ -9,7 +9,9 @@ import type { DangerInput } from '../cleaner/danger.js';
 import type { DangerResponse } from 'shared';
 import type { RenameRequest } from 'shared';
 import type { ApiInput } from '../api/worker.js';
+import type { RecordRequest,RecordResponse } from 'shared';
 export class MatcherClient {
+  preview(payload:RecordRequest){return this.run<RecordResponse>('preview',payload);}
   api<T>(payload:ApiInput){return this.run<T>('api',payload);}
   private pool = offLoop(workerModule('./worker.js',import.meta.url),{concurrency:1,timeoutMs:300_000});
   constructor(private env: Env, private settings: () => Settings) {}

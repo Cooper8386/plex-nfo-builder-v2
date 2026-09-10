@@ -38,7 +38,9 @@ test('contract API status codes, boundary checks and protected docs',async()=>wi
     error(await get('/api/jobs/missing'),404);
     const detail=await get('/api/items/detail?path='+encodeURIComponent(folder));expect(detail.statusCode,detail.body).toBe(200);expect(detail.json().season_poster_progress.state).toBe('not_started');
     expect((await get('/api/logs/app')).json()).toEqual({lines:[]});
-    expect((await post('/api/tvdb/cache/clear',{})).json()).toEqual({cleared:expect.any(Number)});
+    error(await post('/api/tvdb/cache/clear',{}),400);
+    const cachePreview=(await post('/api/tvdb/cache/clear',{dry_run:true})).json();
+    expect((await post('/api/tvdb/cache/clear',{preview_id:cachePreview.preview_id,confirm:true})).json()).toMatchObject({ok:true,removed:expect.any(Number)});
     error(await post('/api/plex/refresh',{path:' '}),400);
   }finally{await app.close();}
   const unset=createApp({env:loadEnv({MEDIA_ROOT:box.media,CONFIG_DIR:box.config}),logger:false});

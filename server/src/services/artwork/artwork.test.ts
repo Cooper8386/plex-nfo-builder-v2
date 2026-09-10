@@ -78,7 +78,9 @@ test('artwork routes persist manual choices, report progress and validate custom
     expect(upload.statusCode,upload.body).toBe(200);const custom=upload.json();
     expect((await app.inject({url:custom.url,headers})).body).toBe('png-test-image');
     expect((await app.inject({method:'POST',url:'/api/artwork/select',headers,payload:{folder_path:folder,slot:'season-01-poster',url:custom.url}})).statusCode).toBe(200);
-    expect((await app.inject({method:'DELETE',url:custom.url,headers})).statusCode).toBe(200);
+    expect((await app.inject({method:'DELETE',url:custom.url,headers})).statusCode).toBe(400);
+    const preview=(await app.inject({method:'POST',url:'/api/previews',headers,payload:{op:'custom-delete',id:custom.id,dry_run:true}})).json();
+    expect((await app.inject({method:'DELETE',url:custom.url+'?'+new URLSearchParams({preview_id:preview.preview_id,confirm:'true'}),headers})).statusCode).toBe(200);
     expect((await app.inject({url:custom.url,headers})).statusCode).toBe(404);
     expect((await app.inject({url:'/api/artwork/progress?path='+encodeURIComponent(folder),headers})).json().state).toBe('in_progress');
     expect((await app.inject({url:'/api/artwork/languages',headers})).json()).toEqual({tvdb:[],tmdb:[]});

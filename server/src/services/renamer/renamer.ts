@@ -15,6 +15,7 @@ import { selectEpisode } from '../parser/episode-selection.js';
 import { ProbeCache,type MediaInfo } from '../mediainfo/mediainfo.js';
 import { renderTemplate,sanitize } from './grammar.js';
 import { renameNoReplace } from './native-move.js';
+import { fileStamp,checkFile } from '../cleaner/previews.js';
 const probes=new ProbeCache();
 const portable=(folder:string,path:string)=>relative(folder,path).split(sep).join('/');
 async function sameFile(a:string,b:string) {
@@ -47,7 +48,7 @@ export async function previewRename(folder:string,data:Metadata,snapshot:Sidecar
   }
   return {folder_path:folder,template,items};
 }
-async function companions(src:string,dst:string):Promise<RenameMove[]> {
+export async function companions(src:string,dst:string):Promise<RenameMove[]> {
   const stem=basename(src,extname(src)),newStem=basename(dst,extname(dst));
   const entries=await readdir(dirname(src),{withFileTypes:true});
   const stems=entries.filter(e=>e.isFile()&&videoPattern.test(e.name)).map(e=>basename(e.name,extname(e.name)).toLowerCase());
@@ -71,7 +72,11 @@ async function moveFile(move:RenameMove) {
 class RenameRecoveryError extends Error {
   constructor(readonly recoveryPath:string,readonly originalPath:string,cause:unknown){super(`Rename recovery required: original file retained at ${recoveryPath}`,{cause});}
 }
-export async function applyRename(db:Database.Database,folder:string,items:RenameItem[],onlySrc?:string[]):Promise<RenameResult> {
+export interface CapturedMove extends RenameMove {stamp:string}
+export async function captureMoves(item:RenameItem):Promise<CapturedMove[]> {
+  return Promise.all([{src:item.src,dst:item.dst},...await companions(item.src,item.dst)].map(async move=>({...move,stamp:await fileStamp(move.src)})));
+}
+export async function applyRename(db:Database.Database,folder:string,items:RenameItem[],onlySrc?:string[],captured?:Record<string,CapturedMove[]>):Promise<RenameResult> {
   folder=await realpath(folder);const result:RenameResult={ok:true,renamed:[],skipped:[],failed:[],companions_moved:[],companions_failed:[]};
   for(const item of items) {
     if(onlySrc&&!onlySrc.includes(item.src))continue;
@@ -81,10 +86,12 @@ export async function applyRename(db:Database.Database,folder:string,items:Renam
       if(dirname(resolve(item.src))!==dirname(resolve(item.dst)))throw new Error('Cross-folder rename refused');
       const parent=await realpath(dirname(item.src));if(parent!==dirname(item.src)||!isWithin(folder,parent))throw new Error('Rename path outside item folder');
       if(!videoPattern.test(item.src)||!videoPattern.test(item.dst))throw new Error('Expected video filenames');
-      const moves=[{src:item.src,dst:item.dst},...await companions(item.src,item.dst)];
+      const moves=captured?captured[item.src]!:[{src:item.src,dst:item.dst},...await companions(item.src,item.dst)];
+      if(!moves)throw new Error('Source was not captured in this preview');
+      if(captured)for(const move of captured[item.src]!)await checkFile(move.src,move.stamp);
       for(const move of moves){const stat=await lstat(move.src);if(!stat.isFile()||stat.isSymbolicLink())throw new Error('Expected regular source file');if(await conflict(move.src,move.dst))throw new Error('Destination exists');}
       before=folderSnapshot(db,folder);
-      for(const move of moves){await moveFile(move);moved.push(move);}
+      for(const move of moves){if(captured)await checkFile(move.src,(move as CapturedMove).stamp);await moveFile(move);moved.push(move);}
       const after=structuredClone(before),from=portable(folder,item.src),to=portable(folder,item.dst);
       for(const mapping of after.episode_file_overrides)if(mapping.file_path===from)mapping.file_path=to;
       await writeSidecar(folder,after);restoreSnapshot(db,folder,after);

@@ -8,7 +8,9 @@ import type { Watcher } from '../services/watcher/watcher.js';
 import type { Settings } from '../config/settings.js';
 import { publicSettings,watcherSettings } from '../config/settings.js';
 import type { Env } from '../config/env.js';
-import type { PlexTestResponse,PlexSectionsResponse,PlexRefreshResponse,DeleteLibraryResponse,ScanLibraryResponse,CacheClearResponse,ProviderPayload } from 'shared';
+import type { PlexTestResponse,PlexSectionsResponse,PlexRefreshResponse,ScanLibraryResponse,ProviderPayload } from 'shared';
+import type { RecordRequest,RecordResponse } from 'shared';
+import { confirmationProperties,confirmationQuery } from './danger.js';
 const string={type:'string'},nonblank={type:'string',minLength:1},integer={type:'integer',minimum:0};
 const object=(required:string[],properties:Record<string,unknown>)=>({type:'object',required,properties,additionalProperties:false});
 const nullable=(type:unknown)=>({anyOf:[type,{type:'null'}]});
@@ -26,7 +28,7 @@ export function apiRoutes(app:FastifyInstance,api:ApiClient,matcher:MatcherClien
   app.post<{Body:TagRequest;Reply:OkResponse}>('/api/items/tags',{schema:{body:object(['folder_path','tag'],{folder_path:nonblank,tag:nonblank})}},request=>matcher.api({op:'mutate',input:{op:'tag-add',request:request.body}}));
   app.delete<{Querystring:TagRequest;Reply:OkResponse}>('/api/items/tags',{schema:{querystring:object(['folder_path','tag'],{folder_path:nonblank,tag:nonblank})}},request=>matcher.api({op:'mutate',input:{op:'tag-delete',request:request.query}}));
   app.post<{Body:{folder_path:string};Reply:OkResponse}>('/api/items/remove',{schema:{body:object(['folder_path'],{folder_path:nonblank})}},request=>matcher.api({op:'mutate',input:{op:'remove',request:request.body}}));
-  app.delete<{Params:{name:string};Reply:DeleteLibraryResponse}>('/api/libraries/:name',async request=>{const result=await matcher.api<DeleteLibraryResponse>({op:'library-delete',name:request.params.name});await watcher.reload();return result;});
+  app.delete<{Params:{name:string};Querystring:Partial<RecordRequest>;Reply:RecordResponse}>('/api/libraries/:name',{schema:confirmationQuery},async request=>{const result=await matcher.preview({...request.query,op:'library-delete',library:request.params.name});if('ok' in result)await watcher.reload();return result;});
   app.post<{Params:{name:string};Reply:ScanLibraryResponse}>('/api/libraries/:name/scan',async request=>{
     if(!(await scanner.libraries()).some(library=>library.name===request.params.name))throw new Error('Library not found');
     void scanner.scan(request.params.name).catch(()=>app.log.error('Background library scan failed'));return {ok:true,scheduled:true};
@@ -44,7 +46,7 @@ export function apiRoutes(app:FastifyInstance,api:ApiClient,matcher:MatcherClien
   });
   app.get<{Querystring:{tail?:number};Reply:LogResponse}>('/api/logs/app',{schema:{querystring:object([],{tail:{type:'integer'}})}},request=>api.run({op:'app-log',tail:request.query.tail}));
   for(const kind of ['series','movie'] as const)app.get<{Params:{id:string};Reply:ProviderPayload}>(`/api/tvdb/${kind}/:id`,request=>api.run({op:'tvdb',kind,id:request.params.id}));
-  app.post<{Reply:CacheClearResponse}>('/api/tvdb/cache/clear',()=>matcher.api({op:'cache-clear'}));
+  app.post<{Body:Partial<RecordRequest>;Reply:RecordResponse}>('/api/tvdb/cache/clear',{schema:{body:{type:'object',properties:confirmationProperties}}},r=>matcher.preview({...r.body,op:'cache-clear'}));
   app.get<{Reply:PlexTestResponse}>('/api/plex/test',()=>api.run({op:'plex',input:{op:'test'}}));
   app.get<{Reply:PlexSectionsResponse}>('/api/plex/sections',()=>api.run({op:'plex',input:{op:'sections'}}));
   app.post<{Body:PlexRefreshRequest;Reply:PlexRefreshResponse}>('/api/plex/refresh',{schema:{body:object(['path'],{path:string,delay_seconds:{type:'number'}})}},request=>api.run({op:'plex',input:{op:'refresh',...request.body}}));

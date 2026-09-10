@@ -3,6 +3,8 @@ import multipart from '@fastify/multipart';
 import type { ArtworkCandidatesQuery, ArtworkCandidatesResponse, ArtworkLanguagesResponse, ArtworkResponse, ClearArtworkRequest, CustomArtwork, CustomArtworkRequest, CustomArtworkResponse, SeasonPosterProgress, SelectArtworkRequest } from 'shared';
 import type { MatcherClient } from '../services/matcher/client.js';
 import { maxArtworkBytes } from '../services/artwork/download.js';
+import { confirmationProperties,confirmationQuery } from './danger.js';
+import type { RecordRequest,RecordResponse } from 'shared';
 
 const text = {type:'string',minLength:1};
 const object = (required: string[], properties: Record<string,unknown>)=>({type:'object',required,properties});
@@ -14,13 +16,13 @@ export function artworkRoutes(app: FastifyInstance, client: MatcherClient) {
     routes.get<{Querystring:ArtworkCandidatesQuery;Reply:ArtworkCandidatesResponse}>('/api/artwork/candidates',{schema:{querystring:pathQuery}},r=>client.artwork({op:'candidates',path:r.query.path}));
     routes.get<{Querystring:{path:string};Reply:SeasonPosterProgress}>('/api/artwork/progress',{schema:{querystring:pathQuery}},r=>client.artwork({op:'progress',path:r.query.path}));
     routes.post<{Body:SelectArtworkRequest;Reply:ArtworkResponse}>('/api/artwork/select',{schema:{body:object(['folder_path','slot','url'],{folder_path:text,slot:text,url:text,language:{type:['string','null']},score:{type:['number','null']}})}},r=>client.artwork({...r.body,op:'select'}));
-    routes.post<{Body:ClearArtworkRequest;Reply:ArtworkResponse}>('/api/artwork/clear',{schema:{body:object(['folder_path'],{folder_path:text,slot:text})}},r=>client.artwork({...r.body,op:'clear'}));
+    routes.post<{Body:ClearArtworkRequest&Partial<RecordRequest>;Reply:ArtworkResponse|RecordResponse}>('/api/artwork/clear',{schema:{body:object(['folder_path'],{folder_path:text,slot:text,...confirmationProperties})}},r=>r.body.slot?client.artwork({...r.body,op:'clear'}):client.preview({...r.body,op:'artwork-clear'}));
     routes.get<{Reply:ArtworkLanguagesResponse}>('/api/artwork/languages',()=>client.artwork({op:'languages'}));
     routes.get<{Querystring:{path:string}}>('/api/artwork/file',{schema:{querystring:pathQuery}},(r,reply)=>sendFile(client.artwork({op:'file',path:r.query.path}),reply));
     routes.get<{Querystring:{folder_path:string};Reply:CustomArtworkResponse}>('/api/artwork/custom',{schema:{querystring:object(['folder_path'],{folder_path:text})}},r=>client.artwork({op:'custom-list',folder_path:r.query.folder_path}));
     routes.post<{Body:CustomArtworkRequest;Reply:CustomArtwork}>('/api/artwork/custom-url',{schema:{body:object(['folder_path','url'],{folder_path:text,url:text,slot:text})}},r=>client.artwork({...r.body,op:'register'}));
     routes.get<{Params:{id:string}}>('/api/artwork/custom/:id',(r,reply)=>sendFile(client.artwork({op:'custom-file',id:r.params.id}),reply));
-    routes.delete<{Params:{id:string};Reply:ArtworkResponse}>('/api/artwork/custom/:id',r=>client.artwork({op:'custom-delete',id:r.params.id}));
+    routes.delete<{Params:{id:string};Querystring:Partial<RecordRequest>;Reply:RecordResponse}>('/api/artwork/custom/:id',{schema:confirmationQuery},r=>client.preview({...r.query,op:'custom-delete',id:r.params.id}));
     routes.post<{Reply:CustomArtwork}>('/api/artwork/upload',async r=>{
       let data: Buffer|undefined, content_type = ''; const fields: Record<string,string> = {};
       for await (const part of r.parts()) {

@@ -18,7 +18,7 @@ export function authenticatedImageUrl(path: string, params: Record<string, strin
   return url.pathname + url.search;
 }
 
-async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function request<T>(path: string, signal?: AbortSignal, options: RequestInit = {}, plain = false): Promise<T> {
   const token = getToken();
   const controller = new AbortController();
   const abort = () => controller.abort(signal?.reason);
@@ -26,8 +26,8 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   if (signal?.aborted) abort();
   const timeout = window.setTimeout(() => controller.abort(new Error('The server took too long to respond. Please retry.')), 30_000);
   try {
-    const response = await fetch(apiUrl(path), { headers: { 'x-api-token': token, Accept: 'application/json' }, signal: controller.signal });
-    const data: unknown = await response.json().catch(() => null);
+    const response = await fetch(apiUrl(path), { ...options, headers: { 'x-api-token': token, Accept: plain ? 'text/plain' : 'application/json', ...options.headers }, signal: controller.signal });
+    const data: unknown = plain && response.ok ? await response.text() : await response.json().catch(() => null);
     controller.signal.throwIfAborted();
     if (!response.ok) {
       if (response.status === 401 && getToken() === token) requireAuthentication();
@@ -47,6 +47,10 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 export const api = {
+  get: <T>(path: string, params: Record<string, string> = {}, signal?: AbortSignal) => { const url = apiUrl(path, params); return request<T>(url.pathname + url.search, signal); },
+  send: <T>(path: string, body?: unknown, method = 'POST') => request<T>(path, undefined, { method, ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }) }),
+  upload: <T>(path: string, body: FormData) => request<T>(path, undefined, { method: 'POST', body }),
+  text: (path: string, signal?: AbortSignal) => request<string>(path, signal, {}, true),
   health: (signal?: AbortSignal) => request<HealthResponse>('/api/health', signal),
   libraries: (signal?: AbortSignal) => request<LibrariesResponse>('/api/libraries', signal),
   items: (query: ItemsQuery, signal?: AbortSignal) => {

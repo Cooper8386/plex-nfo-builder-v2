@@ -3,5 +3,5 @@ export type OverrideField = 'title'|'sorttitle'|'plot'|'tagline'|'originaltitle'
 export interface NfoOverride { scope: string; field: OverrideField; value: string }
 export interface OverridesResponse { path: string; overrides: NfoOverride[] }
 export interface OverrideRequest { folder_path: string; scope: string; field: OverrideField; value?: string|null }
-export interface ClearOverridesRequest { folder_path: string; scope?: string; field?: OverrideField }
+export interface ClearOverridesRequest extends Pick<import('./danger.js').RecordRequest,'dry_run'|'preview_id'|'confirm'> { folder_path: string; scope?: string; field?: OverrideField }
 export type OverrideResponse = OkResponse;

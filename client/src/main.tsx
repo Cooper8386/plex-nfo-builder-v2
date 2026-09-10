@@ -7,6 +7,7 @@ import { queryClient } from './app/query-client.js';
 import { Shell } from './app/Shell.js';
 import './design/styles.css';
 import './app/shell.css';
+import './views/views.css';
 
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>

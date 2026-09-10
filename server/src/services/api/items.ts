@@ -99,11 +99,11 @@ export async function mutateItem(db:Database.Database,root:string,input:ItemMuta
   }
   await writeSidecar(folder,next);try{restoreSnapshot(db,folder,next);}catch(error){await writeSidecar(folder,before);throw error;}return {ok:true};
 }
-export async function deleteLibrary(db:Database.Database,root:string,name:string){
+export async function deleteLibrary(db:Database.Database,root:string,name:string,beforeDelete?:()=>void){
   if(!db.prepare('SELECT 1 FROM libraries WHERE name=?').get(name))throw new Error('Library not found');
   const library=await pathBoundary(root,name,false);if(relative(await mediaPath(root,'.'),library).split(sep).length!==1)throw invalid('Invalid library path');
   const tables=['item_state','bindings','nfo_overrides','artwork_selections','active_artwork','custom_artwork','episode_overrides','episode_file_overrides','custom_tags','watcher_review'];
-  return db.transaction(()=>{const folders=new Set<string>();let items=0,bindings=0;
+  return db.transaction(()=>{beforeDelete?.();const folders=new Set<string>();let items=0,bindings=0;
     for(const table of tables)for(const row of db.prepare(`SELECT DISTINCT folder_path FROM ${table}`).all() as {folder_path:string}[])if(isWithin(library,row.folder_path)){folders.add(row.folder_path);if(table==='item_state')items++;if(table==='bindings')bindings++;}
     for(const folder of folders)forgetFolder(db,folder);db.prepare('DELETE FROM libraries WHERE name=?').run(name);return {ok:true,items,bindings};
   })();

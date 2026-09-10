@@ -18,7 +18,9 @@ test('nfo override routes persist scopes, restore fallback and update sort title
     expect((await app.scanner.items())[0]?.sort_title).toBe('Show');
     expect((await post('/api/overrides',{folder_path:folder,scope:'bad',field:'title',value:'Bad'})).statusCode).toBe(400);
     await post('/api/overrides',{folder_path:folder,scope:'episode-4',field:'title',value:'Episode'});
-    await post('/api/overrides/clear',{folder_path:folder});
+    expect((await post('/api/overrides/clear',{folder_path:folder})).statusCode).toBe(400);
+    const preview=(await post('/api/overrides/clear',{folder_path:folder,dry_run:true})).json();
+    await post('/api/overrides/clear',{folder_path:folder,preview_id:preview.preview_id,confirm:true});
     expect((await app.inject({url:`/api/overrides?path=${encodeURIComponent(folder)}`,headers})).json().overrides).toEqual([]);
     expect((await readSidecar(folder))?.overrides).toEqual([]);
   }finally{await app.close();}

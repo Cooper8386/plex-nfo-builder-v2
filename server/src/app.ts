@@ -52,13 +52,13 @@ export function createApp(options: { env?: Env; logger?: FastifyServerOptions['l
   matchRoutes(app, matcher);
   overrideRoutes(app, matcher);
   artworkRoutes(app, matcher);
-  dangerRoutes(app,matcher);
+  dangerRoutes(app,matcher,()=>watcher.reload());
   renameRoutes(app,matcher);
   const builder=new BuilderClient(env,settings);
   buildRoutes(app,builder);
   const watcher=new Watcher(env,settings,scanner,matcher,builder);
   const saveSettings=async(patch:Partial<Settings>)=>{loadedSettings=await store.save(patch);};
-  watcherRoutes(app,watcher,enabled=>saveSettings({watcher_enabled:enabled}));
+  watcherRoutes(app,watcher,enabled=>saveSettings({watcher_enabled:enabled}),matcher);
   const scheduler=new Scheduler(env,builder);scheduleRoutes(app,scheduler);
   const api=new ApiClient(env,settings);apiRoutes(app,api,matcher,scanner,builder,watcher,env,settings,saveSettings,pkg.version);
   app.addHook('onClose',async()=>{await scheduler.close();await watcher.close();await api.close();await builder.close();await matcher.close();await scanner.close();});

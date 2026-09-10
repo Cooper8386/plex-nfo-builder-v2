@@ -17,6 +17,7 @@ import { downloadArtwork, maxArtworkBytes, saveArtwork } from './download.js';
 import { mediaFolders, videoPattern } from '../scanner/layout.js';
 import { selectEpisode } from '../parser/episode-selection.js';
 import type { NfoOptions } from '../nfo/nfo.js';
+import { checkFile } from '../cleaner/previews.js';
 
 export const slotPattern = /^(poster|background|banner|clearlogo|season-\d{2}-poster|episode-thumb-[A-Za-z0-9_-]+)$/;
 export type ArtworkInput = {op:'candidates'|'progress'|'file';path:string}|{op:'languages'}|
@@ -142,13 +143,17 @@ export class ArtworkService {
     if (!isWithin(await realpath(this.config),path) || !(await lstat(path)).isFile()) throw new ArtworkError('Custom artwork must be a regular file inside config');
     return path;
   }
-  async removeCustom(id: string) {
+  async removeCustom(id: string, capturedFile?: {path:string;stamp:string}) {
     const row = this.db.prepare('SELECT * FROM custom_artwork WHERE id=?').get(id) as Omit<CustomArtwork,'url'>|undefined;
     if (!row) throw new Error('Artwork file not found');
     const url = row.source==='upload'?`/api/artwork/custom/${id}`:row.origin!;
     const references = this.db.prepare('SELECT DISTINCT folder_path FROM artwork_selections WHERE url=?').all(url) as {folder_path:string}[];
     for (const reference of references) await this.persist(await this.folder(reference.folder_path),selections=>selections.filter(selection=>selection.url!==url));
-    if (row.source === 'upload') await unlink(await this.customFile(id));
+    if (row.source === 'upload') {
+      const file = capturedFile?.path ?? await this.customFile(id);
+      if (capturedFile) await checkFile(file,capturedFile.stamp);
+      await unlink(file);
+    }
     this.db.prepare('DELETE FROM custom_artwork WHERE id=?').run(id); return {ok:true as const};
   }
   async file(path: string, custom = false) {

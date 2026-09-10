@@ -14,6 +14,10 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
   return <span className={`ui-badge ui-badge--${tone}`}>{children}</span>;
 }
 
+export function Select({ label, children, ...props }: ComponentPropsWithRef<'select'> & { label: string }) {
+  return <label className="ui-field"><span>{label}</span><select {...props} className="ui-input">{children}</select></label>;
+}
+
 export function TableWrapper({ children, label }: { children: ReactNode; label: string }) {
   return <div className="ui-table-wrapper" role="region" aria-label={label} tabIndex={0}>{children}</div>;
 }
