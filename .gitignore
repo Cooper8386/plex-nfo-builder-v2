@@ -6,3 +6,6 @@ coverage/
 /config/
 *.log
 *.tsbuildinfo
+AGENTS.md
+IMPLEMENTATION.md
+REPO_SPEC.md
